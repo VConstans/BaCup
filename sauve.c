@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <dirent.h>
+#include <sys/stat.h>
+#include <string.h>
 #include "buffer.h"
 #include "fctListe.h"
 //#include "scanner.h"
@@ -13,7 +15,7 @@ struct argument
 	char* destination;
 	pthread_mutex_t mut;
 	pthread_cond_t cond;
-}
+};
 
 
 struct bufferDossier* bufferDossier=NULL;
@@ -22,7 +24,7 @@ struct bufferDossier* bufferDossier=NULL;
 void executionScanner(struct bufferDossier* dossierTraiter,char* dest)
 {
 	//TODO tester resultat
-	DIR* dossier=opendir(dossierTraiter->path);
+	DIR* dossier=opendir(dossierTraiter->chemin);
 	struct dirent* entree=(struct dirent*)malloc(sizeof(struct dirent));
 
 	while((entree=readdir(dossier))!=NULL)
@@ -39,24 +41,24 @@ void executionScanner(struct bufferDossier* dossierTraiter,char* dest)
 			}
 			if(S_ISDIR(info->st_mode))
 			{
-				int lgAncienChemin=strlen(dossierTraiter->path);
+				int lgAncienChemin=strlen(dossierTraiter->chemin);
 				int lgPrefixeDest=strlen(dest);
 				int lgNom=strlen(entree->d_name);
 	
-				char* newPath=(char*)malloc(lgPrefixDest + lgAncienChemin + lgNom + 3);
-				memcpy(newPath,dest,lgPrefixDest);
-				newPath[lgPrefixDest]='/';
+				char* newPath=(char*)malloc(lgPrefixeDest + lgAncienChemin + lgNom + 3);
+				memcpy(newPath,dest,lgPrefixeDest);
+				newPath[lgPrefixeDest]='/';
 	
-				memcpy(&newPath[lgPrefixDest+1],dossierTraiter->path,lgAncienChemin);
-				newPath[lgPrefixDest+1+lgAncienChemin]='/';
+				memcpy(&newPath[lgPrefixeDest+1],dossierTraiter->chemin,lgAncienChemin);
+				newPath[lgPrefixeDest+1+lgAncienChemin]='/';
 	
-				memcpy(&newPath[lgPrefixDest+2+lgAncienChemin],entree->d_name);
-				newPath[lgPrefixDest+2+lgAncienChemin+lgNom]='\0';
+				memcpy(&newPath[lgPrefixeDest+2+lgAncienChemin],entree->d_name,lgNom);
+				newPath[lgPrefixeDest+2+lgAncienChemin+lgNom]='\0';
 		
 				mkdir(newPath,info->st_mode);
 	
 				char* newCheminSrc=(char*)malloc(lgAncienChemin + lgNom +2);
-				memcpy(newCheminSrc,dossierTraiter->path,lgAncienChemin);
+				memcpy(newCheminSrc,dossierTraiter->chemin,lgAncienChemin);
 					newCheminSrc[lgAncienChemin]='/';
 	
 				memcpy(&newCheminSrc[lgAncienChemin+1],entree->d_name,lgNom);
@@ -88,7 +90,7 @@ void* scanner(void* arg)
 		}
 		else
 		{
-			executionScanner(dossierSuivant,arg->destination);
+			executionScanner(dossierSuivant,argument->destination);
 			pthread_cond_broadcast(&argument->cond);
 		}
 		pthread_mutex_unlock(&argument->mut);
