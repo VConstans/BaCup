@@ -1,4 +1,5 @@
-#include "sauve.h"
+#include "buffer.h"
+#include "fctListe.h"
 
 void addBuff(struct bufferDossier* maillon,struct bufferDossier* buff)
 {
@@ -9,8 +10,6 @@ void addBuff(struct bufferDossier* maillon,struct bufferDossier* buff)
 	}
 	tmp->suivant=maillon;
 }
-
-//TODO creermaillon
 
 
 void rmBuff(struct buffer* buff)

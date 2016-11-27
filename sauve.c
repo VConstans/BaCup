@@ -1,21 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include "sauve.h"
+#include "buffer.h"
+#include "fctListe.h"
+#include "scanner.h"
+#include "analyser.h"
 
 struct bufferDossier;
 
 
 
 
-void* scanner(void* mut)
-{
-	
-}
 
-void* analyser(void* mut)
-{
-}
 
 int main(int argc,char* argv[])
 {
