@@ -1,21 +1,15 @@
 #ifndef _SAUVE_H_
 #define _SAUVE_H_
 
-struct maillon
+struct bufferDossier
 {
 	char* nom;
 	char* chemin;
 	struct dossier* suivant;
 };
 
-struct bufferDossier
-{
-	struct dossier* nextLire;
-	struct dossier* nextAjout;
-};
-
-void addBuff(struct buffer maillon, struct buffer* buff);
-struct buffer* rmBuff(struct buffer* buff);
+void addBuff(struct bufferDossier* maillon, struct bufferDossier* buff);
+struct buffer* rmBuff(struct bufferDossier* buff);
 struct maillon creerMaillon(...); //TODO
 
 #endif
