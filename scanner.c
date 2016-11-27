@@ -3,5 +3,5 @@
 
 void* scanner(void* mut)
 {
-	
+	struct bufferDossier* cheminCourant=extractBuffer(bufferDossier);
 }

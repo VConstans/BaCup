@@ -5,7 +5,7 @@ struct bufferDossier
 {
 	char* nom;
 	char* chemin;
-	struct dossier* suivant;
+	struct bufferDossier* suivant;
 };
 
 #endif

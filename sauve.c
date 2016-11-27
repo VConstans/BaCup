@@ -3,13 +3,20 @@
 #include <pthread.h>
 #include "buffer.h"
 #include "fctListe.h"
-#include "scanner.h"
-#include "analyser.h"
+//#include "scanner.h"
+//#include "analyser.h"
 
-struct bufferDossier;
+struct bufferDossier* bufferDossier=NULL;
+const char* destination=NULL;
 
+void* scanner(void* mut)
+{
+	struct bufferDossier* cheminCourant=extractBuff(bufferDossier);
+}
 
-
+void* analyser(void* mut)
+{
+}
 
 
 
@@ -20,15 +27,15 @@ int main(int argc,char* argv[])
 	int nbScanner=2;
 	int nbAnalyser=2;
 
-	struct maillon* racine=creerMaillon(...);
-	addBuff(racine,dossier);
+	struct bufferDossier* racine=creerMaillon(argv[1]);
+	addBuff(racine,bufferDossier);
 
 	//TODO verifier retour malloc
-	int* tidScanner=(int)malloc(nbScanner*sizeof(int));
-	int* tidAnalyser=(int)malloc(nbAnalyser*sizeof(int));
+	pthread_t* tidScanner=(pthread_t*)malloc(nbScanner*sizeof(pthread_t));
+	pthread_t* tidAnalyser=(pthread_t*)malloc(nbAnalyser*sizeof(pthread_t));
 
 	pthread_mutex_t mutScanner;
-	pthread_mutes_t mutAnalyser;
+	pthread_mutex_t mutAnalyser;
 
 	if(pthread_mutex_init(&mutScanner,NULL)!=0)
 	{
@@ -45,7 +52,7 @@ int main(int argc,char* argv[])
 	int i;
 	for(i=0;i<nbScanner;i++)
 	{
-		if(pthread_create(tidScanner[i],NULL,scanner,&mutScanner)!=0)
+		if(pthread_create(&tidScanner[i],NULL,scanner,&mutScanner)!=0)
 		{
 			perror("Erreur création de thread scanneur");
 			exit(EXIT_FAILURE);
@@ -55,7 +62,7 @@ int main(int argc,char* argv[])
 	int j;
 	for(j=0;j<nbAnalyser;j++)
 	{
-		if(pthread_create(tidAnalyser[i],NULL,analyser,&mutAnalyser)!=0)
+		if(pthread_create(&tidAnalyser[i],NULL,analyser,&mutAnalyser)!=0)
 		{
 			perror("Erreur creation de thread analyseur");
 			exit(EXIT_FAILURE);
