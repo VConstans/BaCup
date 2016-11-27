@@ -19,6 +19,7 @@ struct argument
 
 
 struct bufferDossier* bufferDossier=NULL;
+struct bufferFichier* bufferFichier=NULL;
 
 
 void executionScanner(struct bufferDossier* dossierTraiter,char* dest)
@@ -35,26 +36,28 @@ void executionScanner(struct bufferDossier* dossierTraiter,char* dest)
 	
 			//TODO tester resultat
 			stat(entree->d_name,info);
+
+			int lgAncienChemin=strlen(dossierTraiter->chemin);
+			int lgPrefixeDest=strlen(dest);
+			int lgNom=strlen(entree->d_name);
+
+			char* newPath=(char*)malloc(lgPrefixeDest + lgAncienChemin + lgNom + 3);
+			memcpy(newPath,dest,lgPrefixeDest);
+			newPath[lgPrefixeDest]='/';
+
+			memcpy(&newPath[lgPrefixeDest+1],dossierTraiter->chemin,lgAncienChemin);
+			newPath[lgPrefixeDest+1+lgAncienChemin]='/';
+
+			memcpy(&newPath[lgPrefixeDest+2+lgAncienChemin],entree->d_name,lgNom);
+			newPath[lgPrefixeDest+2+lgAncienChemin+lgNom]='\0';
+
+
 			if(S_ISREG(info->st_mode))
 			{
-				
+				//TODO ajouter dans buffer fichier
 			}
 			if(S_ISDIR(info->st_mode))
 			{
-				int lgAncienChemin=strlen(dossierTraiter->chemin);
-				int lgPrefixeDest=strlen(dest);
-				int lgNom=strlen(entree->d_name);
-	
-				char* newPath=(char*)malloc(lgPrefixeDest + lgAncienChemin + lgNom + 3);
-				memcpy(newPath,dest,lgPrefixeDest);
-				newPath[lgPrefixeDest]='/';
-	
-				memcpy(&newPath[lgPrefixeDest+1],dossierTraiter->chemin,lgAncienChemin);
-				newPath[lgPrefixeDest+1+lgAncienChemin]='/';
-	
-				memcpy(&newPath[lgPrefixeDest+2+lgAncienChemin],entree->d_name,lgNom);
-				newPath[lgPrefixeDest+2+lgAncienChemin+lgNom]='\0';
-		
 				mkdir(newPath,info->st_mode);
 	
 				char* newCheminSrc=(char*)malloc(lgAncienChemin + lgNom +2);
