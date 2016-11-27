@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <dirent.h>
 #include "buffer.h"
 #include "fctListe.h"
 //#include "scanner.h"
@@ -17,6 +18,57 @@ struct argument
 
 struct bufferDossier* bufferDossier=NULL;
 
+
+void executionScanner(struct bufferDossier* dossierTraiter,char* dest)
+{
+	//TODO tester resultat
+	DIR* dossier=opendir(dossierTraiter->path);
+	struct dirent* entree=(struct dirent*)malloc(sizeof(struct dirent));
+
+	while((entree=readdir(dossier))!=NULL)
+	{
+		if(strcmp(entree->d_name,".")!=0 && strcmp(entree->d_name,"..")!=0)
+		{
+			struct stat* info=(struct stat*)malloc(sizeof(struct stat));
+	
+			//TODO tester resultat
+			stat(entree->d_name,info);
+			if(S_ISREG(info->st_mode))
+			{
+				
+			}
+			if(S_ISDIR(info->st_mode))
+			{
+				int lgAncienChemin=strlen(dossierTraiter->path);
+				int lgPrefixeDest=strlen(dest);
+				int lgNom=strlen(entree->d_name);
+	
+				char* newPath=(char*)malloc(lgPrefixDest + lgAncienChemin + lgNom + 3);
+				memcpy(newPath,dest,lgPrefixDest);
+				newPath[lgPrefixDest]='/';
+	
+				memcpy(&newPath[lgPrefixDest+1],dossierTraiter->path,lgAncienChemin);
+				newPath[lgPrefixDest+1+lgAncienChemin]='/';
+	
+				memcpy(&newPath[lgPrefixDest+2+lgAncienChemin],entree->d_name);
+				newPath[lgPrefixDest+2+lgAncienChemin+lgNom]='\0';
+		
+				mkdir(newPath,info->st_mode);
+	
+				char* newCheminSrc=(char*)malloc(lgAncienChemin + lgNom +2);
+				memcpy(newCheminSrc,dossierTraiter->path,lgAncienChemin);
+					newCheminSrc[lgAncienChemin]='/';
+	
+				memcpy(&newCheminSrc[lgAncienChemin+1],entree->d_name,lgNom);
+				newCheminSrc[lgAncienChemin+1+lgNom]='\0';
+	
+				struct bufferDossier* newDossier=creerMaillon(newCheminSrc);
+				addBuff(newDossier,bufferDossier);
+			}
+		}
+	}
+	
+}
 
 
 
@@ -36,7 +88,7 @@ void* scanner(void* arg)
 		}
 		else
 		{
-			//TODO traitement
+			executionScanner(dossierSuivant,arg->destination);
 			pthread_cond_broadcast(&argument->cond);
 		}
 		pthread_mutex_unlock(&argument->mut);
