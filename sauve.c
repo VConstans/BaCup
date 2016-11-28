@@ -71,7 +71,7 @@ void executionScanner(struct bufferDossier* dossierTraiter,char* dest)
 				mkdir(newPath,info->st_mode);
 	
 				struct bufferDossier* newDossier=creerMaillonDossier(newCheminSrc);
-				addBuffDossier(newDossier,bufferDossier);
+				addBuffDossier(newDossier,&bufferDossier);
 			}
 		}
 	}
@@ -88,7 +88,7 @@ void* scanner(void* arg)
 	do
 	{
 		pthread_mutex_lock(&argument->mut);
-		struct bufferDossier* dossierSuivant=extractBuffDossier(bufferDossier);
+		struct bufferDossier* dossierSuivant=extractBuffDossier(&bufferDossier);
 		if(dossierSuivant==NULL)
 		{
 			//TODO while si jamais le braodcast vient des analyser
@@ -119,7 +119,7 @@ int main(int argc,char* argv[])
 	int tailleBufferFichier=10;
 
 	struct bufferDossier* racine=creerMaillonDossier(argv[1]);
-	addBuffDossier(racine,bufferDossier);
+	addBuffDossier(racine,&bufferDossier);
 
 	bufferFichier=(struct bufferFichier*)malloc(sizeof(struct bufferFichier));
 	bufferFichier->chemin=(char**)malloc(tailleBufferFichier*sizeof(char*));

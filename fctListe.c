@@ -4,9 +4,14 @@
 #include "buffer.h"
 #include "fctListe.h"
 
-void addBuffDossier(struct bufferDossier* maillon,struct bufferDossier* buff)
+void addBuffDossier(struct bufferDossier* maillon,struct bufferDossier** buff)
 {
-	struct bufferDossier* tmp=buff;
+	if(buff==NULL)
+	{
+		*buff=maillon;
+		return;
+	}
+	struct bufferDossier* tmp=*buff;
 	while(tmp->suivant!=NULL)
 	{
 		tmp=tmp->suivant;
@@ -15,19 +20,19 @@ void addBuffDossier(struct bufferDossier* maillon,struct bufferDossier* buff)
 }
 
 
-void rmBuffDossier(struct bufferDossier* buff)
+void rmBuffDossier(struct bufferDossier** buff)
 {
-	struct bufferDossier* tmp=buff;
-	buff=buff->suivant;
+	struct bufferDossier* tmp=*buff;
+	*buff=*buff->suivant;
 	free(tmp->chemin);
 	free(tmp);
 }
 
 
-struct bufferDossier* extractBuffDossier(struct bufferDossier* buff)
+struct bufferDossier* extractBuffDossier(struct bufferDossier** buff)
 {
-	struct bufferDossier* tmp = buff;
-	buff=buff->suivant;
+	struct bufferDossier* tmp = *buff;
+	*buff=*buff->suivant;
 	return tmp;
 }
 
@@ -40,16 +45,16 @@ struct bufferDossier* creerMaillonDossier(char* path)
 		exit(EXIT_FAILURE);
 	}
 
-	maillon->chemin=(char*)malloc(strlen(path)*sizeof(char));
-	strcpy(maillon->chemin,path);
+	maillon->chemin=path;
+	maillon->suivant=NULL;
 
 	return maillon;
 }
 
-void rmMaillonDossier(struct bufferDossier* buff)
+void rmMaillonDossier(struct bufferDossier** buff)
 {
-	free(buff->chemin);
-	free(buff);
+	free(*buff->chemin);
+	free(*buff);
 }
 
 
