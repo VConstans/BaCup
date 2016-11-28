@@ -40,7 +40,7 @@ void executionScanner(struct bufferDossier* dossierTraiter,char* dest)
 			int lgAncienChemin=strlen(dossierTraiter->chemin);
 			int lgPrefixeDest=strlen(dest);
 			int lgNom=strlen(entree->d_name);
-
+//TODO a changer par fprintf
 			char* newCheminSrc=(char*)malloc(lgAncienChemin + lgNom +2);
 			memcpy(newCheminSrc,dossierTraiter->chemin,lgAncienChemin);
 			newCheminSrc[lgAncienChemin]='/';
@@ -85,22 +85,29 @@ void* scanner(void* arg)
 	struct argument* argument=(struct argument*)arg;
 	//struct bufferDossier* cheminCourant=extractBuff(bufferDossier);
 
-	do
+	pthread_mutex_lock(&argument->mut);
+	while(1)
 	{
-		pthread_mutex_lock(&argument->mut);
-		struct bufferDossier* dossierSuivant=extractBuffDossier(&bufferDossier);
-		if(dossierSuivant==NULL)
+		while(bufferDossier==NULL && threadActif!=0)
 		{
-			//TODO while si jamais le braodcast vient des analyser
-			pthread_cond_wait(&argument->cond,&argument->mut);
+			pthread_cond_wait(...);
+		}
+		if(bufferDossier==NULL && threadActif==0)
+		{
+			//TODO unlock
+			//TODO breoadcast
+			pthread_exit(.....);
 		}
 		else
 		{
-			executionScanner(dossierSuivant,argument->destination);
-			pthread_cond_broadcast(&argument->cond);
+			threadActif++;
+			extractBuffDossier(..);
+			pthread_mutex_unlock(&argument->mut);
+			executionScanner(...);
+			pthread_mutex_lock(&argument->mut);
+			threadActif--;
 		}
-		pthread_mutex_unlock(&argument->mut);
-	} while(bufferDossier!=NULL);
+	}
 }
 
 void* analyser(void* mut)
