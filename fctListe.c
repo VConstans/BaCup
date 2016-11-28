@@ -4,7 +4,7 @@
 #include "buffer.h"
 #include "fctListe.h"
 
-void addBuff(struct bufferDossier* maillon,struct bufferDossier* buff)
+void addBuffDossier(struct bufferDossier* maillon,struct bufferDossier* buff)
 {
 	struct bufferDossier* tmp=buff;
 	while(tmp->suivant!=NULL)
@@ -15,7 +15,7 @@ void addBuff(struct bufferDossier* maillon,struct bufferDossier* buff)
 }
 
 
-void rmBuff(struct bufferDossier* buff)
+void rmBuffDossier(struct bufferDossier* buff)
 {
 	struct bufferDossier* tmp=buff;
 	buff=buff->suivant;
@@ -24,14 +24,14 @@ void rmBuff(struct bufferDossier* buff)
 }
 
 
-struct bufferDossier* extractBuff(struct bufferDossier* buff)
+struct bufferDossier* extractBuffDossier(struct bufferDossier* buff)
 {
 	struct bufferDossier* tmp = buff;
 	buff=buff->suivant;
 	return tmp;
 }
 
-struct bufferDossier* creerMaillon(char* path)
+struct bufferDossier* creerMaillonDossier(char* path)
 {
 	struct bufferDossier* maillon;
 	if((maillon=(struct bufferDossier*)malloc(sizeof(struct bufferDossier)))==NULL)
@@ -46,8 +46,17 @@ struct bufferDossier* creerMaillon(char* path)
 	return maillon;
 }
 
-void rmMaillon(struct bufferDossier* buff)
+void rmMaillonDossier(struct bufferDossier* buff)
 {
 	free(buff->chemin);
 	free(buff);
+}
+
+
+/**********************************************************************/
+
+void addBuffFichier(char* chemin,struct bufferFichier* buff)
+{
+	buff->chemin[buff->idxEcrivain]=chemin;
+	buff->idxEcrivain=(buff->idxEcrivain+1)%buff->taille;
 }

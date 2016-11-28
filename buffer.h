@@ -1,7 +1,6 @@
 #ifndef _SAUVE_H_
 #define _SAUVE_H_
 
-#define TAILLE 10
 
 struct bufferDossier
 {
@@ -13,8 +12,8 @@ struct bufferDossier
 
 struct bufferFichier
 {
-	char* chemin[TAILLE];
-	int taille=TAILLE;
+	char** chemin;
+	int taille;
 	int idxLecteur;
 	int idxEcrivain;
 };

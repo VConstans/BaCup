@@ -41,6 +41,20 @@ void executionScanner(struct bufferDossier* dossierTraiter,char* dest)
 			int lgPrefixeDest=strlen(dest);
 			int lgNom=strlen(entree->d_name);
 
+			char* newCheminSrc=(char*)malloc(lgAncienChemin + lgNom +2);
+			memcpy(newCheminSrc,dossierTraiter->chemin,lgAncienChemin);
+			newCheminSrc[lgAncienChemin]='/';
+
+			memcpy(&newCheminSrc[lgAncienChemin+1],entree->d_name,lgNom);
+			newCheminSrc[lgAncienChemin+1+lgNom]='\0';
+
+			if(S_ISREG(info->st_mode))
+			{
+				addBuffFichier(newCheminSrc);
+			}
+			if(S_ISDIR(info->st_mode))
+			{
+
 			char* newPath=(char*)malloc(lgPrefixeDest + lgAncienChemin + lgNom + 3);
 			memcpy(newPath,dest,lgPrefixeDest);
 			newPath[lgPrefixeDest]='/';
@@ -52,23 +66,12 @@ void executionScanner(struct bufferDossier* dossierTraiter,char* dest)
 			newPath[lgPrefixeDest+2+lgAncienChemin+lgNom]='\0';
 
 
-			if(S_ISREG(info->st_mode))
-			{
-				//TODO ajouter dans buffer fichier
-			}
-			if(S_ISDIR(info->st_mode))
-			{
+
+
 				mkdir(newPath,info->st_mode);
 	
-				char* newCheminSrc=(char*)malloc(lgAncienChemin + lgNom +2);
-				memcpy(newCheminSrc,dossierTraiter->chemin,lgAncienChemin);
-					newCheminSrc[lgAncienChemin]='/';
-	
-				memcpy(&newCheminSrc[lgAncienChemin+1],entree->d_name,lgNom);
-				newCheminSrc[lgAncienChemin+1+lgNom]='\0';
-	
-				struct bufferDossier* newDossier=creerMaillon(newCheminSrc);
-				addBuff(newDossier,bufferDossier);
+				struct bufferDossier* newDossier=creerMaillonDossier(newCheminSrc);
+				addBuffDossier(newDossier,bufferDossier);
 			}
 		}
 	}
@@ -85,7 +88,7 @@ void* scanner(void* arg)
 	do
 	{
 		pthread_mutex_lock(&argument->mut);
-		struct bufferDossier* dossierSuivant=extractBuff(bufferDossier);
+		struct bufferDossier* dossierSuivant=extractBuffDossier(bufferDossier);
 		if(dossierSuivant==NULL)
 		{
 			//TODO while si jamais le braodcast vient des analyser
@@ -113,8 +116,16 @@ int main(int argc,char* argv[])
 	int nbScanner=2;
 	int nbAnalyser=2;
 
-	struct bufferDossier* racine=creerMaillon(argv[1]);
-	addBuff(racine,bufferDossier);
+	int tailleBufferFichier=10;
+
+	struct bufferDossier* racine=creerMaillonDossier(argv[1]);
+	addBuffDossier(racine,bufferDossier);
+
+	bufferFichier=(struct bufferFichier*)malloc(sizeof(struct bufferFichier));
+	bufferFichier->chemin=(char**)malloc(tailleBufferFichier*sizeof(char*));
+	bufferFichier->taille=tailleBufferFichier;
+	bufferFichier->idxLecteur=0;
+	bufferFichier->idxEcrivain=0;
 
 	//TODO verifier retour malloc
 	pthread_t* tidScanner=(pthread_t*)malloc(nbScanner*sizeof(pthread_t));
@@ -147,7 +158,8 @@ int main(int argc,char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	//TODO mettre chemin de destination dans structure
+	argScanner.destination=argv[2];
+	argAnalyser.destination=argv[2];
 
 	int i;
 	for(i=0;i<nbScanner;i++)
