@@ -8,17 +8,9 @@
 #include "fctListe.h"
 #include "scanner.h"
 #include "analyser.h"
+#include "argument.h"
 
 
-struct argument
-{
-	char* destination;
-	pthread_mutex_t mut_scanner;
-	pthread_cond_t cond_scanner;
-	pthread_mutex_t mut_analyser;
-	pthread_cond_t cond_analyser;
-
-};
 
 
 struct bufferDossier* bufferDossier=NULL;
@@ -41,7 +33,7 @@ int main(int argc,char* argv[])
 	//Initialisation du buffer de dossier
 	int tailleBufferFichier=10;	//TODO changer
 
-	struct maillon* racine=creerMaillonDossier(argv[1]);
+	struct maillon* racine=creerMaillonDossier(".");
 	bufferDossier=(struct bufferDossier*)malloc(sizeof(struct bufferDossier));
 	bufferDossier->dernier=NULL;
 	bufferDossier->liste=NULL;
@@ -89,6 +81,7 @@ int main(int argc,char* argv[])
 	}
 
 	arg.destination=argv[2];
+	arg.source=argv[1];
 
 	int i;
 	for(i=0;i<nbScanner;i++)
@@ -143,10 +136,18 @@ int main(int argc,char* argv[])
 
 
 
-void executionScanner(struct maillon* dossierTraiter,char* dest)
+void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 {
+	int lgPrefixeSource=strlen(arg->source);
+	int lgAncienChemin=strlen(dossierTraiter->chemin);
+	int lgPrefixeDest=strlen(arg->destination);
+
+	char* cheminSource=(char*)malloc(lgPrefixeSource + lgAncienChemin + 2);
+	sprintf(cheminSource,"%s/%s",arg->source,dossierTraiter->chemin);
+	int lgcheminSource=strlen(cheminSource);	//XXX peut changer car connait la taille
+
 	//TODO tester resultat
-	DIR* dossier=opendir(dossierTraiter->chemin);
+	DIR* dossier=opendir(cheminSource);
 	struct dirent* entree=(struct dirent*)malloc(sizeof(struct dirent));
 
 	while((entree=readdir(dossier))!=NULL)
@@ -156,12 +157,11 @@ void executionScanner(struct maillon* dossierTraiter,char* dest)
 			struct stat* info=(struct stat*)malloc(sizeof(struct stat));
 
 
-			int lgAncienChemin=strlen(dossierTraiter->chemin);
-			int lgPrefixeDest=strlen(dest);
-			int lgNom=strlen(entree->d_name);
 //TODO a changer par fprintf
-			char* newCheminSrc=(char*)malloc(lgAncienChemin + lgNom +2);
-			sprintf(newCheminSrc,"%s/%s",dossierTraiter->chemin,entree->d_name);
+
+			int lgNom=strlen(entree->d_name);
+			char* newCheminSrc=(char*)malloc(lgcheminSource + lgNom +2);
+			sprintf(newCheminSrc,"%s/%s",cheminSource,entree->d_name);
 
 
 			if(stat(newCheminSrc,info)==-1)
@@ -180,14 +180,18 @@ void executionScanner(struct maillon* dossierTraiter,char* dest)
 			if(S_ISDIR(info->st_mode)!=0)
 			{
 
-				char* newPath=(char*)malloc(lgPrefixeDest + lgAncienChemin + lgNom + 3);
-				sprintf(newPath,"%s/%s/%s",dest,dossierTraiter->chemin,entree->d_name);
+				char* suffixeDossierSuivant=(char*)malloc(lgAncienChemin + lgNom + 2);
+				sprintf(suffixeDossierSuivant,"%s/%s",dossierTraiter->chemin,entree->d_name);
+				int lgSuffixeDossierSuivant=strlen(suffixeDossierSuivant);
 
-			//	mkdir(newPath,info->st_mode);
-				printf("Copie %s\n",newPath);
+				char* cheminDossierSuivant=(char*)malloc(lgSuffixeDossierSuivant + lgPrefixeDest + 2);
+				sprintf(cheminDossierSuivant,"%s/%s",arg->destination,suffixeDossierSuivant);
+
+				mkdir(cheminDossierSuivant,info->st_mode);
+				printf("Copie %s\n",cheminDossierSuivant);
 	
-				struct maillon* newDossier=creerMaillonDossier(newCheminSrc);
-				addBuffDossier(newDossier,bufferDossier);
+				struct maillon* maillonDossierSuivant=creerMaillonDossier(suffixeDossierSuivant);
+				addBuffDossier(maillonDossierSuivant,bufferDossier);
 			}
 		}
 	}
@@ -222,7 +226,7 @@ void* scanner(void* arg)
 
 			pthread_mutex_unlock(&argument->mut_scanner);
 
-			executionScanner(extrait,argument->destination);
+			executionScanner(extrait,argument);
 
 			pthread_mutex_lock(&argument->mut_scanner);
 

@@ -1,4 +1,4 @@
-sauve: sauve.c fctListe
+sauve: sauve.c fctListe scanner.h analyser.h argument.h
 	gcc -g -pthread sauve.c fctListe.o -o sauve
 
 #scanner: buffer.h scanner.h scanner.c
