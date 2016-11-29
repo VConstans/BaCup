@@ -101,6 +101,7 @@ int main(int argc,char* argv[])
 	}
 
 	int j;
+/*
 	for(j=0;j<nbAnalyser;j++)
 	{
 		if(pthread_create(&tidAnalyser[i],NULL,analyser,&arg)!=0)
@@ -109,6 +110,7 @@ int main(int argc,char* argv[])
 			exit(EXIT_FAILURE);
 		}
 	}
+*/
 
 	//TODO arreter thread
 	for(i=0;i<nbScanner;i++)
@@ -120,6 +122,7 @@ int main(int argc,char* argv[])
 		}
 	}
 
+/*
 	for(j=0;j<nbAnalyser;j++)
 	{
 		if(pthread_join(tidAnalyser[i],NULL)!=0)
@@ -128,7 +131,7 @@ int main(int argc,char* argv[])
 			exit(EXIT_FAILURE);
 		}
 	}
-
+*/
 
 	return 0;
 }
@@ -171,7 +174,7 @@ void executionScanner(struct maillon* dossierTraiter,char* dest)
 			if(S_ISREG(info->st_mode)!=0)
 			{
 				//TODO lock buffer fichier
-				addBuffFichier(newCheminSrc);
+				//addBuffFichier(newCheminSrc);
 				printf("Ajout bufferfichier\n");
 			}
 			if(S_ISDIR(info->st_mode)!=0)
@@ -230,8 +233,11 @@ void* scanner(void* arg)
 	}
 }
 
+/*
 void* analyser(void* arg)
-{
+{}
+*/
+/*{
 	struct argument* argument=(struct argument*) arg;
 
 	//TODO lock bufferDossier
@@ -258,3 +264,4 @@ void* analyser(void* arg)
 		}
 	}
 }
+*/
