@@ -4,42 +4,44 @@
 #include "buffer.h"
 #include "fctListe.h"
 
-void addBuffDossier(struct bufferDossier* maillon,struct bufferDossier** buff)
+void addBuffDossier(struct maillon* maillon,struct bufferDossier* buff)
 {
-	if(buff==NULL)
+	if(buff->liste==NULL)
 	{
-		*buff=maillon;
-		return;
+		buff->liste=maillon;
 	}
-	struct bufferDossier* tmp=*buff;
-	while(tmp->suivant!=NULL)
+	else
 	{
-		tmp=tmp->suivant;
+		buff->dernier->suivant=maillon;
 	}
-	tmp->suivant=maillon;
+	buff->dernier=maillon;
 }
 
 
-void rmBuffDossier(struct bufferDossier** buff)
+void rmBuffDossier(struct bufferDossier* buff)
 {
-	struct bufferDossier* tmp=*buff;
-	*buff=*buff->suivant;
+	struct maillon* tmp=buff->liste;
+	buff->liste=buff->liste->suivant;
 	free(tmp->chemin);
 	free(tmp);
 }
 
 
-struct bufferDossier* extractBuffDossier(struct bufferDossier** buff)
+struct maillon* extractBuffDossier(struct bufferDossier* buff)
 {
-	struct bufferDossier* tmp = *buff;
-	*buff=*buff->suivant;
+	struct maillon* tmp = buff->liste;
+	if(buff->liste==buff->dernier)
+	{
+		buff->dernier=NULL;
+	}
+	buff->liste=buff->liste->suivant;
 	return tmp;
 }
 
-struct bufferDossier* creerMaillonDossier(char* path)
+struct maillon* creerMaillonDossier(char* path)
 {
-	struct bufferDossier* maillon;
-	if((maillon=(struct bufferDossier*)malloc(sizeof(struct bufferDossier)))==NULL)
+	struct maillon* maillon;
+	if((maillon=(struct maillon*)malloc(sizeof(struct maillon)))==NULL)
 	{
 		perror("Erreur malloc maillon");
 		exit(EXIT_FAILURE);
@@ -51,10 +53,10 @@ struct bufferDossier* creerMaillonDossier(char* path)
 	return maillon;
 }
 
-void rmMaillonDossier(struct bufferDossier** buff)
+void rmMaillonDossier(struct maillon* maillon)
 {
-	free(*buff->chemin);
-	free(*buff);
+	free(maillon->chemin);
+	free(maillon);
 }
 
 
