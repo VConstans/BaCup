@@ -2,12 +2,18 @@
 #define _SAUVE_H_
 
 
+struct maillon
+{
+	char* chemin;
+	struct maillon* suivant;
+};
+
 struct bufferDossier
 {
-	char* nom;
-	char* chemin;
-	struct bufferDossier* suivant;
+	struct maillon* dernier;
+	struct maillon* liste;
 };
+
 
 
 struct bufferFichier
