@@ -13,15 +13,17 @@
 struct argument
 {
 	char* destination;
-	pthread_mutex_t mut;
-	pthread_cond_t cond;
+	pthread_mutex_t mut_scanner;
+	pthread_cond_t cond_scanner;
+	pthread_mutex_t mut_analyser;
+	pthread_cond_t cond_analyser;
+
 };
 
 
 struct bufferDossier* bufferDossier=NULL;
 struct bufferFichier* bufferFichier=NULL;
 int scannerActif=0;
-int analyserActif=0;
 
 
 
@@ -35,7 +37,9 @@ int main(int argc,char* argv[])
 	int nbScanner=1;
 	int nbAnalyser=2;
 
-	int tailleBufferFichier=10;
+
+	//Initialisation du buffer de dossier
+	int tailleBufferFichier=10;	//TODO changer
 
 	struct maillon* racine=creerMaillonDossier(argv[1]);
 	bufferDossier=(struct bufferDossier*)malloc(sizeof(struct bufferDossier));
@@ -43,50 +47,53 @@ int main(int argc,char* argv[])
 	bufferDossier->liste=NULL;
 	addBuffDossier(racine,bufferDossier);
 
+
+	//Initialisation du buffer de fichier
 	bufferFichier=(struct bufferFichier*)malloc(sizeof(struct bufferFichier));
 	bufferFichier->chemin=(char**)malloc(tailleBufferFichier*sizeof(char*));
 	bufferFichier->taille=tailleBufferFichier;
 	bufferFichier->idxLecteur=0;
 	bufferFichier->idxEcrivain=0;
+	bufferFichier->interIdx=0;
 
 	//TODO verifier retour malloc
 	pthread_t* tidScanner=(pthread_t*)malloc(nbScanner*sizeof(pthread_t));
 	pthread_t* tidAnalyser=(pthread_t*)malloc(nbAnalyser*sizeof(pthread_t));
 
-	struct argument argScanner;
-	struct argument argAnalyser;
 
-	if(pthread_mutex_init(&argScanner.mut,NULL)!=0)
+	//Initialisation des arguments à passer aux threads
+	struct argument arg;
+
+	if(pthread_mutex_init(&arg.mut_scanner,NULL)!=0)
 	{
 		perror("Erreur creation mutex Scanner");
 		exit(EXIT_FAILURE);
 	}
 
-	if(pthread_mutex_init(&argAnalyser.mut,NULL)!=0)
+	if(pthread_mutex_init(&arg.mut_analyser,NULL)!=0)
 	{
 		perror("Erreur creation mutex analyser");
 		exit(EXIT_FAILURE);
 	}
 
-	if(pthread_cond_init(&argScanner.cond,NULL)!=0)
+	if(pthread_cond_init(&arg.cond_scanner,NULL)!=0)
 	{
 		perror("Erreur creation condition scanner");
 		exit(EXIT_FAILURE);
 	}
 
-	if(pthread_cond_init(&argAnalyser.cond,NULL)!=0)
+	if(pthread_cond_init(&arg.cond_analyser,NULL)!=0)
 	{
 		perror("Erreur creation condition analyser");
 		exit(EXIT_FAILURE);
 	}
 
-	argScanner.destination=argv[2];
-	argAnalyser.destination=argv[2];
+	arg.destination=argv[2];
 
 	int i;
 	for(i=0;i<nbScanner;i++)
 	{
-		if(pthread_create(&tidScanner[i],NULL,scanner,&argScanner)!=0)
+		if(pthread_create(&tidScanner[i],NULL,scanner,&arg)!=0)
 		{
 			perror("Erreur création de thread scanneur");
 			exit(EXIT_FAILURE);
@@ -96,7 +103,7 @@ int main(int argc,char* argv[])
 	int j;
 	for(j=0;j<nbAnalyser;j++)
 	{
-		if(pthread_create(&tidAnalyser[i],NULL,analyser,&argAnalyser)!=0)
+		if(pthread_create(&tidAnalyser[i],NULL,analyser,&arg)!=0)
 		{
 			perror("Erreur creation de thread analyseur");
 			exit(EXIT_FAILURE);
@@ -163,6 +170,7 @@ void executionScanner(struct maillon* dossierTraiter,char* dest)
 
 			if(S_ISREG(info->st_mode)!=0)
 			{
+				//TODO lock buffer fichier
 				addBuffFichier(newCheminSrc);
 				printf("Ajout bufferfichier\n");
 			}
@@ -188,19 +196,18 @@ void executionScanner(struct maillon* dossierTraiter,char* dest)
 void* scanner(void* arg)
 {
 	struct argument* argument=(struct argument*)arg;
-	//struct maillon* cheminCourant=extractBuff(bufferDossier);
 
-	pthread_mutex_lock(&argument->mut);
+	pthread_mutex_lock(&argument->mut_scanner);
 	while(1)
 	{
 		while(bufferDossier->liste==NULL && scannerActif!=0)
 		{
-			pthread_cond_wait(&argument->cond,&argument->mut);
+			pthread_cond_wait(&argument->cond_scanner,&argument->mut_scanner);
 		}
 		if(bufferDossier->liste==NULL && scannerActif==0)
 		{
-			pthread_mutex_unlock(&argument->mut);
-			pthread_cond_broadcast(&argument->cond);
+			pthread_mutex_unlock(&argument->mut_scanner);
+			pthread_cond_broadcast(&argument->cond_scanner);
 			pthread_exit(NULL);
 		}
 		else
@@ -210,17 +217,28 @@ void* scanner(void* arg)
 			struct maillon* extrait;
 			extrait=extractBuffDossier(bufferDossier);
 
-			pthread_mutex_unlock(&argument->mut);
+			pthread_mutex_unlock(&argument->mut_scanner);
 
 			executionScanner(extrait,argument->destination);
 
-			pthread_mutex_lock(&argument->mut);
+			pthread_mutex_lock(&argument->mut_scanner);
 
 			scannerActif--;
+			pthread_cond_broadcast(&argument->cond_scanner);	//XXX utile?
+			//TODO reveiller analyser?
 		}
 	}
 }
 
 void* analyser(void* arg)
 {
+	//TODO lock bufferDossier
+	//TODO lock bufferFichier
+	while(1)
+	{
+		while(bufferFichier->interIdx==0 && scannerActif!=0)
+		{
+			
+		}
+	}
 }
