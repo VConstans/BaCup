@@ -22,6 +22,7 @@ struct bufferFichier
 	int taille;
 	int idxLecteur;
 	int idxEcrivain;
+	int interIdx;
 };
 
 #endif
