@@ -232,12 +232,28 @@ void* scanner(void* arg)
 
 void* analyser(void* arg)
 {
+	struct argument* argument=(struct argument*) arg;
+
 	//TODO lock bufferDossier
 	//TODO lock bufferFichier
 	while(1)
 	{
 		while(bufferFichier->interIdx==0 && scannerActif!=0)
 		{
+			pthread_cond_wait(&argument->cond_analyser);
+		}
+
+		if(bufferFichier->interIdx==0 && scannerActif==0)
+		{
+			//TODO fin
+		}
+		else
+		{
+			extractBuffFichier(...);
+			pthread_mutex_unlock(&argument->mut_analyser)
+			executionAnalyser(...);
+
+			pthread_mutex_lock(&argument->mut_analyser);
 			
 		}
 	}
