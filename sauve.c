@@ -372,10 +372,17 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	
 			if(statSource.st_size == statSauvegarde.st_size && statSource.st_mtime == statSauvegarde.st_mtime && statSource.st_mode == statSauvegarde.st_mode)
 			{
-				if(link(cheminSauvegarde,cheminDestination)!=0)
+				if(verbeux==0)
 				{
-					perror("Erreur link");
-					exit(EXIT_FAILURE);
+					if(link(cheminSauvegarde,cheminDestination)!=0)
+					{
+						perror("Erreur link");
+						exit(EXIT_FAILURE);
+					}
+				}
+				else
+				{
+					printf("Création lien %s vers %s\n",cheminDestination,cheminSauvegarde);
 				}
 			}
 			else
