@@ -10,6 +10,10 @@ struct argument
 	pthread_cond_t cond_scanner;
 	pthread_mutex_t mut_analyser;
 	pthread_cond_t cond_analyser;
+	pthread_mutex_t mut_compt;
+
+	int incremental;
+	int verbeux;
 
 };
 
