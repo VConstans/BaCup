@@ -29,6 +29,21 @@ int scannerActif=0;
 int main(int argc,char* argv[])
 {
 	//TODO controle des arguments
+	char* argument;
+
+	struct argument arg;
+
+	extern char* optarg;
+	extern int optind, opterr;
+	while((argument=getopt(argc,argv,"ns:a:f:")))
+	{
+		switch(argument)
+		{
+			case 'n':
+				if()
+				arg.verbeux=
+		}
+	}
 
 	int nbScanner=2;
 	int nbAnalyser=2;
@@ -58,7 +73,6 @@ int main(int argc,char* argv[])
 
 
 	//Initialisation des arguments à passer aux threads
-	struct argument arg;
 
 	if(pthread_mutex_init(&arg.mut_scanner,NULL)!=0)
 	{
@@ -200,7 +214,6 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				sprintf(newSuffixeSrc,"%s/%s",dossierTraiter->chemin,entree->d_name);
 
 				addBuffFichier(newSuffixeSrc,bufferFichier,arg);
-				printf("Ajout bufferfichier\n");
 			}
 			if(S_ISDIR(info->st_mode)!=0)
 			{
@@ -212,19 +225,23 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				char* cheminDossierSuivant=(char*)malloc(lgSuffixeDossierSuivant + lgPrefixeDest + 2);
 				sprintf(cheminDossierSuivant,"%s/%s",arg->destination,suffixeDossierSuivant);
 
-				mkdir(cheminDossierSuivant,info->st_mode);
-				printf("Copie %s\n",cheminDossierSuivant);
-	
-				struct maillon* maillonDossierSuivant=creerMaillonDossier(suffixeDossierSuivant);
-				pthread_mutex_lock(&arg->mut_scanner);
-				addBuffDossier(maillonDossierSuivant,bufferDossier);
-				pthread_mutex_unlock(&arg->mut_scanner);
+				if(arg->verbeux==0)
+				{
+					mkdir(cheminDossierSuivant,info->st_mode);
+					struct maillon* maillonDossierSuivant=creerMaillonDossier(suffixeDossierSuivant);
+					pthread_mutex_lock(&arg->mut_scanner);
+					addBuffDossier(maillonDossierSuivant,bufferDossier);
+					pthread_mutex_unlock(&arg->mut_scanner);
+				}
+				else
+				{
+					printf("Copie dossier %s",suffixeDossierSuivant);
+				}
 			}
 		}
-	}
 	
+	}
 }
-
 
 
 void* scanner(void* arg)
