@@ -90,9 +90,10 @@ int main(int argc,char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	arg.source=argv[1];	//TODO changer
 	arg.destination=argv[2];
-	arg.source=argv[1];
-
+	arg.sauvegarde=argv[3];
+	arg.incremental=0;
 
 	struct stat statSource;
 	if(stat(arg.source,&statSource)!=0)
@@ -264,7 +265,7 @@ void* scanner(void* arg)
 			pthread_mutex_lock(&argument->mut_compt);
 			scannerActif--;
 			pthread_cond_broadcast(&argument->cond_scanner);	//XXX utile?
-			//TODO reveiller analyser?
+			pthread_cond_broadcast(&argument->cond_analyser);
 		}
 	}
 }
@@ -356,27 +357,33 @@ void* analyser(void* arg)
 {
 	struct argument* argument=(struct argument*) arg;
 
-	//TODO lock bufferDossier
-	//TODO lock bufferFichier
+	
+	pthread_mutex_lock(&argument->mut_analyser);
+	pthread_mutex_lock(&argument->mut_compt);
 	while(1)
 	{
 		while(bufferFichier->interIdx==0 && scannerActif!=0)
 		{
+			pthread_mutex_unlock(&argument->mut_compt);
 			pthread_cond_wait(&argument->cond_analyser,&argument->mut_analyser);
+			pthread_mutex_lock(&argument->mut_compt);
 		}
 
 		if(bufferFichier->interIdx==0 && scannerActif==0)
 		{
-			//TODO fin
+			pthread_mutex_unlock(&argument->mut_compt);
+			pthread_mutex_unlock(&argument->mut_analyser
+			pthread_exit(NULL);
 		}
 		else
 		{
-			extractBuffFichier(...);
+			pthread_mutex_unlock(&argument->mut_compt);
+			char* extrait=extractBuffFichier(bufferFichier,argument);
 			pthread_mutex_unlock(&argument->mut_analyser)
-			executionAnalyser(...);
+			executionAnalyser(extrait,arg);
 
 			pthread_mutex_lock(&argument->mut_analyser);
-			
+			pthread_mutex_lock(&argument->mut_compt);
 		}
 	}
 }
