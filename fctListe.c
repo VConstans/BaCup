@@ -70,7 +70,7 @@ void rmMaillonDossier(struct maillon* maillon)
 void addBuffFichier(char* chemin,struct bufferFichier* buff,struct argument* arg)
 {
 	pthread_mutex_lock(&arg->mut_analyser);
-	while(buff->interIdx>=5)
+	while(buff->interIdx>=buff->taille)
 	{
 		pthread_cond_wait(&arg->cond_analyser,&arg->mut_analyser);
 	}
