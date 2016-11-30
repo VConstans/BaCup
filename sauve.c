@@ -45,8 +45,8 @@ int main(int argc,char* argv[])
 		}
 	}
 */
-	int nbScanner=2;
-	int nbAnalyser=2;
+	int nbScanner=1;
+	int nbAnalyser=1;
 
 
 	//Initialisation du buffer de dossier
@@ -137,7 +137,7 @@ int main(int argc,char* argv[])
 
 	for(j=0;j<nbAnalyser;j++)
 	{
-		if(pthread_create(&tidAnalyser[i],NULL,analyser,&arg)!=0)
+		if(pthread_create(&tidAnalyser[j],NULL,analyser,&arg)!=0)
 		{
 			perror("Erreur creation de thread analyseur");
 			exit(EXIT_FAILURE);
@@ -158,7 +158,7 @@ int main(int argc,char* argv[])
 
 	for(j=0;j<nbAnalyser;j++)
 	{
-		if(pthread_join(tidAnalyser[i],NULL)!=0)
+		if(pthread_join(tidAnalyser[j],NULL)!=0)
 		{
 			perror("Erreur terminaison de thread analyseur");
 			exit(EXIT_FAILURE);
