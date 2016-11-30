@@ -30,8 +30,8 @@ int main(int argc,char* argv[])
 {
 	//TODO controle des arguments
 
-	int nbScanner=1;
-	int nbAnalyser=1;
+	int nbScanner=2;
+	int nbAnalyser=2;
 
 
 	//Initialisation du buffer de dossier
@@ -93,7 +93,7 @@ int main(int argc,char* argv[])
 	arg.source=argv[1];	//TODO changer
 	arg.destination=argv[2];
 	arg.sauvegarde=argv[3];
-	arg.incremental=1;
+	arg.incremental=0;
 
 	struct stat statSource;
 	if(stat(arg.source,&statSource)!=0)
@@ -394,6 +394,7 @@ void* analyser(void* arg)
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
 			pthread_mutex_unlock(&argument->mut_analyser);
+			pthread_cond_broadcast(&argument->cond_analyser);
 			pthread_exit(NULL);
 		}
 		else
