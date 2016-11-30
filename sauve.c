@@ -93,6 +93,21 @@ int main(int argc,char* argv[])
 	arg.destination=argv[2];
 	arg.source=argv[1];
 
+
+	struct stat statSource;
+	if(stat(arg.source,&statSource)!=0)
+	{
+		perror("Erreur stat racine");
+		exit(EXIT_FAILURE);
+	}
+
+	if(mkdir(arg.destination,statSource.st_mode)!=0)
+	{
+		perror("Erreur creation dossier racine");
+		exit(EXIT_FAILURE);
+	}
+
+
 	int i;
 	for(i=0;i<nbScanner;i++)
 	{
@@ -180,7 +195,10 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 
 			if(S_ISREG(info->st_mode)!=0)
 			{
-				addBuffFichier(newCheminSrc);
+				char* newSuffixeSrc=(char*)malloc(lgAncienChemin + lgNom +2);
+				sprintf(newSuffixeSrc,"%s/%s",dossierTraiter->chemin,entree->d_name);
+
+				addBuffFichier(newSuffixeSrc,bufferFichier,arg);
 				printf("Ajout bufferfichier\n");
 			}
 			if(S_ISDIR(info->st_mode)!=0)
@@ -278,7 +296,7 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	char* cheminDestination=(char*)malloc(lgPrefixeDest + lgSuffixeChemin + 2);
 	sprintf(cheminDestination,"%s/%s",arg->destination,suffixeCheminFichier);
 
-	int fichierSource
+	int fichierSource;
 	if((fichierSource=open(cheminSource,O_RDONLY))!=0)
 	{
 		perror("Erreur ouverture fichier source");
