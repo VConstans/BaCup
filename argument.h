@@ -6,6 +6,8 @@ struct argument
 {
 	char* destination;
 	char* source;
+	char* sauvegarde;
+
 	pthread_mutex_t mut_scanner;
 	pthread_cond_t cond_scanner;
 	pthread_mutex_t mut_analyser;
