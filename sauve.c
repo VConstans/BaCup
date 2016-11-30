@@ -31,7 +31,7 @@ int main(int argc,char* argv[])
 	//TODO controle des arguments
 
 	int nbScanner=1;
-//	int nbAnalyser=2;
+	int nbAnalyser=1;
 
 
 	//Initialisation du buffer de dossier
@@ -54,7 +54,7 @@ int main(int argc,char* argv[])
 
 	//TODO verifier retour malloc
 	pthread_t* tidScanner=(pthread_t*)malloc(nbScanner*sizeof(pthread_t));
-//	pthread_t* tidAnalyser=(pthread_t*)malloc(nbAnalyser*sizeof(pthread_t));
+	pthread_t* tidAnalyser=(pthread_t*)malloc(nbAnalyser*sizeof(pthread_t));
 
 
 	//Initialisation des arguments à passer aux threads
@@ -118,7 +118,7 @@ int main(int argc,char* argv[])
 			exit(EXIT_FAILURE);
 		}
 	}
-/*
+
 	int j;
 
 	for(j=0;j<nbAnalyser;j++)
@@ -129,7 +129,7 @@ int main(int argc,char* argv[])
 			exit(EXIT_FAILURE);
 		}
 	}
-*/
+
 
 	//TODO arreter thread
 	for(i=0;i<nbScanner;i++)
@@ -141,7 +141,7 @@ int main(int argc,char* argv[])
 		}
 	}
 
-/*
+
 	for(j=0;j<nbAnalyser;j++)
 	{
 		if(pthread_join(tidAnalyser[i],NULL)!=0)
@@ -150,7 +150,7 @@ int main(int argc,char* argv[])
 			exit(EXIT_FAILURE);
 		}
 	}
-*/
+
 
 	return 0;
 }
@@ -298,7 +298,7 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	sprintf(cheminDestination,"%s/%s",arg->destination,suffixeCheminFichier);
 
 	int fichierSource;
-	if((fichierSource=open(cheminSource,O_RDONLY))!=0)
+	if((fichierSource=open(cheminSource,O_RDONLY))==-1)
 	{
 		perror("Erreur ouverture fichier source");
 		exit(EXIT_FAILURE);
@@ -338,7 +338,6 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	//TODO tester	
 	int fichierDestination=open(cheminDestination,O_WRONLY|O_CREAT,statSource.st_mode);
 		
-	close(fichierDestination);
 	
 	copie(fichierSource,fichierDestination);
 
@@ -350,6 +349,7 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	utime(cheminDestination,&date);
 
 	close(fichierSource);
+	close(fichierDestination);
 }
 
 
