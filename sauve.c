@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <utime.h>
 #include "buffer.h"
 #include "fctListe.h"
 #include "scanner.h"
@@ -165,9 +166,6 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 		{
 			struct stat* info=(struct stat*)malloc(sizeof(struct stat));
 
-
-//TODO a changer par fprintf
-
 			int lgNom=strlen(entree->d_name);
 			char* newCheminSrc=(char*)malloc(lgcheminSource + lgNom +2);
 			sprintf(newCheminSrc,"%s/%s",cheminSource,entree->d_name);
@@ -182,8 +180,7 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 
 			if(S_ISREG(info->st_mode)!=0)
 			{
-				//TODO lock buffer fichier
-				//addBuffFichier(newCheminSrc);
+				addBuffFichier(newCheminSrc);
 				printf("Ajout bufferfichier\n");
 			}
 			if(S_ISDIR(info->st_mode)!=0)
@@ -200,7 +197,9 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				printf("Copie %s\n",cheminDossierSuivant);
 	
 				struct maillon* maillonDossierSuivant=creerMaillonDossier(suffixeDossierSuivant);
+				pthread_mutex_lock(&arg->mut_scanner);
 				addBuffDossier(maillonDossierSuivant,bufferDossier);
+				pthread_mutex_unlock(&arg->mut_scanner);
 			}
 		}
 	}
@@ -255,29 +254,83 @@ void* scanner(void* arg)
 
 /***************************************************************/
 
+void copie(int src,int dest)
+{
+	char* bufferCopie[1024];
+	int nbLu;
+
+	while((nbLu=read(src,bufferCopie,1024))!=0)
+	{
+		write(dest,bufferCopie,nbLu);
+	}
+}
+
+
 void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 {
+	int lgSuffixeChemin=strlen(suffixeCheminFichier);
+	int lgPrefixeSource=strlen(arg->source);
+	int lgPrefixeDest=strlen(arg->destination);
+
+	char* cheminSource=(char*)malloc(lgPrefixeSource + lgSuffixeChemin + 2);
+	sprintf(cheminSource,"%s/%s",arg->source,suffixeCheminFichier);
+
+	char* cheminDestination=(char*)malloc(lgPrefixeDest + lgSuffixeChemin + 2);
+	sprintf(cheminDestination,"%s/%s",arg->destination,suffixeCheminFichier);
+
+	int fichierSource
+	if((fichierSource=open(cheminSource,O_RDONLY))!=0)
+	{
+		perror("Erreur ouverture fichier source");
+		exit(EXIT_FAILURE);
+	}
+
+	struct stat statSource;
+	if(fstat(fichierSource,&statSource)!=0)
+	{
+		perror("Erreur fstat source");
+		exit(EXIT_FAILURE);
+	}
+
+
 	if(arg->incremental==1)
 	{
+		int lgPrefixeSauvegarde=strlen(arg->sauvegarde);
+		char* cheminSauvegarde=(char*)malloc(lgSuffixeChemin + lgPrefixeSauvegarde + 2);
+		sprintf(cheminSauvegarde,"%s/%s",arg->sauvegarde,suffixeCheminFichier);
+
+		struct stat statSauvegarde;
+	
+		if(stat(cheminSauvegarde,&statSauvegarde)!=0)
+		{
+			perror("Erreur fstat sauvegarde");
+			exit(EXIT_FAILURE);
+		}
+
+		if(statSource.st_size == statSauvegarde.st_size && statSource.st_mtime == statSauvegarde.st_mtime && statSource.st_mode == statSauvegarde.st_mode)
+		{
+			if(link(cheminSauvegarde,cheminDestination)!=0)
+			{
+				perror("Erreur link");
+				exit(EXIT_FAILURE);
+			}
+		}
+	}
+	//TODO tester	
+	int fichierDestination=open(cheminDestination,O_WRONLY|O_CREAT,statSource.st_mode);
 		
-	}
-	else
-	{
-		int lgSuffixeChemin=strlen(suffixeCheminFichier);
-		int lgPrefixeSource=strlen(arg->source);
-		int lgPrefixeDest=strlen(arg->destination);
+	close(fichierDestination);
+	
+	copie(fichierSource,fichierDestination);
 
-		char* cheminSource=(char*)malloc(lgPrefixeSource + lgSuffixeChemin + 2);
-		sprintf(cheminSource,"%s/%s",arg->source,suffixeCheminFichier);
+	struct utimbuf date;
+	date.actime=statSource.st_atime;
+	date.modtime=statSource.st_mtime;
 
-		char* cheminDestination=(char*)malloc(lgPrefixeDest + lgSuffixeChemin + 2);
-		sprintf(cheminDestination,"%s/%s",arg->destination,suffixeCheminFichier);
+	//TODO tester
+	utime(cheminDestination,&date);
 
-		//TODO recup droit source
-
-		int fichierSource=open(cheminSource,O_RDONLY);
-		int fichierDestination=open(cheminDestination,O_WRONLY|O_CREAT,/*Recup droit*/);
-	}
+	close(fichierSource);
 }
 
 
@@ -291,7 +344,7 @@ void* analyser(void* arg)
 	{
 		while(bufferFichier->interIdx==0 && scannerActif!=0)
 		{
-			pthread_cond_wait(&argument->cond_analyser);
+			pthread_cond_wait(&argument->cond_analyser,&argument->mut_analyser);
 		}
 
 		if(bufferFichier->interIdx==0 && scannerActif==0)
