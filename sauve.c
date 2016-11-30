@@ -93,7 +93,7 @@ int main(int argc,char* argv[])
 	arg.source=argv[1];	//TODO changer
 	arg.destination=argv[2];
 	arg.sauvegarde=argv[3];
-	arg.incremental=0;
+	arg.incremental=1;
 
 	struct stat statSource;
 	if(stat(arg.source,&statSource)!=0)
@@ -284,6 +284,32 @@ void copie(int src,int dest)
 	}
 }
 
+void copieComplete(char* src,char* dest,struct stat* statSource)
+{
+	//TODO tester	
+	int fichierDestination=open(dest,O_WRONLY|O_CREAT,statSource->st_mode);
+	int fichierSource;
+	if((fichierSource=open(src,O_RDONLY))==-1)
+	{
+		perror("Erreur ouverture fichier source");
+		exit(EXIT_FAILURE);
+	}
+
+	
+	
+	copie(fichierSource,fichierDestination);
+
+	struct utimbuf date;
+	date.actime=statSource->st_atime;
+	date.modtime=statSource->st_mtime;
+
+	//TODO tester
+	utime(dest,&date);
+
+	close(fichierSource);
+	close(fichierDestination);
+}
+
 
 void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 {
@@ -297,15 +323,8 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	char* cheminDestination=(char*)malloc(lgPrefixeDest + lgSuffixeChemin + 2);
 	sprintf(cheminDestination,"%s/%s",arg->destination,suffixeCheminFichier);
 
-	int fichierSource;
-	if((fichierSource=open(cheminSource,O_RDONLY))==-1)
-	{
-		perror("Erreur ouverture fichier source");
-		exit(EXIT_FAILURE);
-	}
-
 	struct stat statSource;
-	if(fstat(fichierSource,&statSource)!=0)
+	if(stat(cheminSource,&statSource)!=0)
 	{
 		perror("Erreur fstat source");
 		exit(EXIT_FAILURE);
@@ -320,36 +339,38 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 
 		struct stat statSauvegarde;
 	
-		if(stat(cheminSauvegarde,&statSauvegarde)!=0)
+		//TODO ques faire si le fichier n'existe pas dans la sauv
+		if(access(cheminSauvegarde,F_OK)!=0)
 		{
-			perror("Erreur fstat sauvegarde");
-			exit(EXIT_FAILURE);
+			copieComplete(cheminSource,cheminDestination,&statSource);
 		}
-
-		if(statSource.st_size == statSauvegarde.st_size && statSource.st_mtime == statSauvegarde.st_mtime && statSource.st_mode == statSauvegarde.st_mode)
+		else
 		{
-			if(link(cheminSauvegarde,cheminDestination)!=0)
+
+			if(stat(cheminSauvegarde,&statSauvegarde)!=0)
 			{
-				perror("Erreur link");
+				perror("Erreur fstat sauvegarde");
 				exit(EXIT_FAILURE);
+			}
+	
+			if(statSource.st_size == statSauvegarde.st_size && statSource.st_mtime == statSauvegarde.st_mtime && statSource.st_mode == statSauvegarde.st_mode)
+			{
+				if(link(cheminSauvegarde,cheminDestination)!=0)
+				{
+					perror("Erreur link");
+					exit(EXIT_FAILURE);
+				}
+			}
+			else
+			{
+				copieComplete(cheminSource,cheminDestination,&statSource);
 			}
 		}
 	}
-	//TODO tester	
-	int fichierDestination=open(cheminDestination,O_WRONLY|O_CREAT,statSource.st_mode);
-		
-	
-	copie(fichierSource,fichierDestination);
-
-	struct utimbuf date;
-	date.actime=statSource.st_atime;
-	date.modtime=statSource.st_mtime;
-
-	//TODO tester
-	utime(cheminDestination,&date);
-
-	close(fichierSource);
-	close(fichierDestination);
+	else
+	{
+		copieComplete(cheminSource,cheminDestination,&statSource);
+	}
 }
 
 
