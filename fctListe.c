@@ -6,7 +6,6 @@
 #include "argument.h"
 #include "fctListe.h"
 
-//TODO lock
 void addBuffDossier(struct maillon* maillon,struct bufferDossier* buff)
 {
 	if(buff->liste==NULL)
@@ -21,7 +20,6 @@ void addBuffDossier(struct maillon* maillon,struct bufferDossier* buff)
 }
 
 
-//TODO lock
 void rmBuffDossier(struct bufferDossier* buff)
 {
 	struct maillon* tmp=buff->liste;
@@ -31,7 +29,6 @@ void rmBuffDossier(struct bufferDossier* buff)
 }
 
 
-//TODO lock?
 struct maillon* extractBuffDossier(struct bufferDossier* buff)
 {
 	struct maillon* tmp = buff->liste;
