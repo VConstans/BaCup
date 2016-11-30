@@ -166,6 +166,14 @@ int main(int argc,char* argv[])
 	}
 
 
+	free(tidScanner);
+	free(tidAnalyser);
+
+	free(bufferDossier);
+	free(bufferFichier->chemin);
+	free(bufferFichier);
+
+
 	return 0;
 }
 
@@ -214,6 +222,7 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				sprintf(newSuffixeSrc,"%s/%s",dossierTraiter->chemin,entree->d_name);
 
 				addBuffFichier(newSuffixeSrc,bufferFichier,arg);
+				free(newSuffixeSrc);
 			}
 			if(S_ISDIR(info->st_mode)!=0)
 			{
@@ -237,10 +246,20 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				{
 					printf("Copie dossier %s",suffixeDossierSuivant);
 				}
+
+				free(suffixeDossierSuivant);
+				free(cheminDossierSuivant);
 			}
+
+			free(newCheminSrc);
+			free(info);
 		}
 	
 	}
+
+	closedir(dossier);
+	free(entree);
+	free(cheminSource);
 }
 
 
@@ -280,6 +299,7 @@ void* scanner(void* arg)
 			pthread_mutex_lock(&argument->mut_scanner);
 
 			pthread_mutex_lock(&argument->mut_compt);
+			rmMaillonDossier(extrait);
 			scannerActif--;
 			pthread_cond_broadcast(&argument->cond_scanner);	//XXX utile?
 			pthread_cond_broadcast(&argument->cond_analyser);
@@ -389,11 +409,16 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 				copieComplete(cheminSource,cheminDestination,&statSource);
 			}
 		}
+
+		free(cheminSource);
 	}
 	else
 	{
 		copieComplete(cheminSource,cheminDestination,&statSource);
 	}
+
+	free(cheminSource);
+	free(cheminDestination);
 }
 
 
