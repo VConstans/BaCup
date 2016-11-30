@@ -81,8 +81,12 @@ void addBuffFichier(char* chemin,struct bufferFichier* buff,struct argument* arg
 	pthread_mutex_unlock(&arg->mut_analyser);
 }
 
-char* extractBuffFichier(struct bufferFichier* buff)
+char* extractBuffFichier(struct bufferFichier* buff,struct argument* arg)
 {
+	while(buff->interIdx<=0)
+	{
+		pthread_cond_wait(&arg->cond_analyser,&arg->mut_analyser);
+	}
 	char* tmp=buff->chemin[buff->idxLecteur];
 	buff->idxLecteur=(buff->idxLecteur+1)%buff->taille;
 	buff->interIdx--;

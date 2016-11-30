@@ -29,13 +29,13 @@ int scannerActif=0;
 int main(int argc,char* argv[])
 {
 	//TODO controle des arguments
-	char* argument;
+//	char* argument;
 
 	struct argument arg;
 
 	extern char* optarg;
 	extern int optind, opterr;
-	while((argument=getopt(argc,argv,"ns:a:f:")))
+/*	while((argument=getopt(argc,argv,"ns:a:f:")))
 	{
 		switch(argument)
 		{
@@ -44,7 +44,7 @@ int main(int argc,char* argv[])
 				arg.verbeux=
 		}
 	}
-
+*/
 	int nbScanner=2;
 	int nbAnalyser=2;
 
@@ -261,8 +261,8 @@ void* scanner(void* arg)
 		if(bufferDossier->liste==NULL && scannerActif==0)
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
-			pthread_mutex_unlock(&argument->mut_scanner);
 			pthread_cond_broadcast(&argument->cond_scanner);
+			pthread_mutex_unlock(&argument->mut_scanner);
 			pthread_exit(NULL);
 		}
 		else
@@ -356,7 +356,6 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 
 		struct stat statSauvegarde;
 	
-		//TODO ques faire si le fichier n'existe pas dans la sauv
 		if(access(cheminSauvegarde,F_OK)!=0)
 		{
 			copieComplete(cheminSource,cheminDestination,&statSource);
@@ -372,7 +371,7 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	
 			if(statSource.st_size == statSauvegarde.st_size && statSource.st_mtime == statSauvegarde.st_mtime && statSource.st_mode == statSauvegarde.st_mode)
 			{
-				if(verbeux==0)
+				if(arg->verbeux==0)
 				{
 					if(link(cheminSauvegarde,cheminDestination)!=0)
 					{
@@ -417,14 +416,15 @@ void* analyser(void* arg)
 		if(bufferFichier->interIdx==0 && scannerActif==0)
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
-			pthread_mutex_unlock(&argument->mut_analyser);
 			pthread_cond_broadcast(&argument->cond_analyser);
+			pthread_mutex_unlock(&argument->mut_analyser);
 			pthread_exit(NULL);
 		}
 		else
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
-			char* extrait=extractBuffFichier(bufferFichier);
+			char* extrait=extractBuffFichier(bufferFichier,argument);
+			pthread_cond_broadcast(&argument->cond_analyser);
 			pthread_mutex_unlock(&argument->mut_analyser);
 			executionAnalyser(extrait,arg);
 

@@ -9,5 +9,5 @@ struct maillon* creerMaillonDossier(char* path);
 struct maillon* extractBuffDossier(struct bufferDossier* buff);
 void rmMaillonDossier(struct maillon* buff);
 void addBuffFichier(char* chemin,struct bufferFichier* buff,struct argument* arg);
-char* extractBuffFichier(struct bufferFichier* buff);
+char* extractBuffFichier(struct bufferFichier* buff,struct argument* arg);
 #endif
