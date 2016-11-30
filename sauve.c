@@ -372,14 +372,14 @@ void* analyser(void* arg)
 		if(bufferFichier->interIdx==0 && scannerActif==0)
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
-			pthread_mutex_unlock(&argument->mut_analyser
+			pthread_mutex_unlock(&argument->mut_analyser);
 			pthread_exit(NULL);
 		}
 		else
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
-			char* extrait=extractBuffFichier(bufferFichier,argument);
-			pthread_mutex_unlock(&argument->mut_analyser)
+			char* extrait=extractBuffFichier(bufferFichier);
+			pthread_mutex_unlock(&argument->mut_analyser);
 			executionAnalyser(extrait,arg);
 
 			pthread_mutex_lock(&argument->mut_analyser);
