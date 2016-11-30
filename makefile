@@ -1,5 +1,5 @@
 sauve: sauve.c fctListe scanner.h analyser.h argument.h
-	gcc -g -pthread sauve.c fctListe.o -o sauve
+	gcc -Wall -Wextra -g -pthread sauve.c fctListe.o -o sauve
 
 #scanner: buffer.h scanner.h scanner.c
 #	gcc -c scanner.c
@@ -8,7 +8,7 @@ sauve: sauve.c fctListe scanner.h analyser.h argument.h
 #	gcc -c analyser.c
 
 fctListe: buffer.h fctListe.h fctListe.c
-	gcc -g -c fctListe.c
+	gcc -Wall -Wextra -g -c fctListe.c
 
 
 clean:
