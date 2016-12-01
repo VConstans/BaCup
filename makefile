@@ -10,6 +10,5 @@ clean:
 
 del:
 	rm -r new
-
 valgrind:
-	valgrind --leak-check=full ./sauve A new
+	valgrind --leak-check=full --show-leak-kinds=all ./sauve A new
