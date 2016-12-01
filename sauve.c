@@ -45,31 +45,55 @@ int main(int argc,char* argv[])
 		}
 	}
 */
-	int nbScanner=5;
-	int nbAnalyser=5;
+	int nbScanner=10;
+	int nbAnalyser=10;
 
 
 	//Initialisation du buffer de dossier
-	int tailleBufferFichier=1;	//TODO changer
+	int tailleBufferFichier=5;	//TODO changer
 
 	struct maillon* racine=creerMaillonDossier(".");
-	bufferDossier=(struct bufferDossier*)malloc(sizeof(struct bufferDossier));
+	if((bufferDossier=(struct bufferDossier*)malloc(sizeof(struct bufferDossier)))==NULL)
+	{
+		perror("Erreur allocation bufferDossier");
+		exit(EXIT_FAILURE);
+	}
 	bufferDossier->dernier=NULL;
 	bufferDossier->liste=NULL;
 	addBuffDossier(racine,bufferDossier);
 
 
 	//Initialisation du buffer de fichier
-	bufferFichier=(struct bufferFichier*)malloc(sizeof(struct bufferFichier));
-	bufferFichier->chemin=(char**)malloc(tailleBufferFichier*sizeof(char*));
+	if((bufferFichier=(struct bufferFichier*)malloc(sizeof(struct bufferFichier)))==NULL)
+	{
+		perror("Erreur allocation structure bufferFichier");
+		exit(EXIT_FAILURE);
+	}
+
+	if((bufferFichier->chemin=(char**)malloc(tailleBufferFichier*sizeof(char*)))==NULL)
+	{
+		perror("Erreur allocation buffer de fichier");
+		exit(EXIT_FAILURE);
+	}
+
 	bufferFichier->taille=tailleBufferFichier;
 	bufferFichier->idxLecteur=0;
 	bufferFichier->idxEcrivain=0;
 	bufferFichier->interIdx=0;
 
-	//TODO verifier retour malloc
-	pthread_t* tidScanner=(pthread_t*)malloc(nbScanner*sizeof(pthread_t));
-	pthread_t* tidAnalyser=(pthread_t*)malloc(nbAnalyser*sizeof(pthread_t));
+	pthread_t* tidScanner;
+	if((tidScanner=(pthread_t*)malloc(nbScanner*sizeof(pthread_t)))==NULL)
+	{
+		perror("Erreur allocation du tableau de thread scanner");
+		exit(EXIT_FAILURE);
+	}
+
+	pthread_t* tidAnalyser;
+	if((tidAnalyser=(pthread_t*)malloc(nbAnalyser*sizeof(pthread_t)))==NULL)
+	{
+		perror("Erreur allocation du tableau de thread analyser");
+		exit(EXIT_FAILURE);
+	}
 
 
 	//Initialisation des arguments à passer aux threads
@@ -145,7 +169,6 @@ int main(int argc,char* argv[])
 	}
 
 
-	//TODO arreter thread
 	for(i=0;i<nbScanner;i++)
 	{
 		if(pthread_join(tidScanner[i],NULL)!=0)
