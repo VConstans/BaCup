@@ -7,3 +7,9 @@ fctListe: buffer.h fctListe.h fctListe.c
 
 clean:
 	rm *.o sauve
+
+del:
+	rm -r new
+
+valgrind:
+	valgrind --leak-check=full ./sauve A new
