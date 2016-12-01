@@ -49,7 +49,7 @@ struct maillon* creerMaillonDossier(char* path)
 		exit(EXIT_FAILURE);
 	}
 
-	maillon->chemin=(char*)malloc(strlen(path));
+	maillon->chemin=(char*)malloc(strlen(path)+1);
 	strcpy(maillon->chemin,path);
 	maillon->suivant=NULL;
 
@@ -76,8 +76,9 @@ void addBuffFichier(char* chemin,struct bufferFichier* buff,struct argument* arg
 		pthread_cond_wait(&arg->cond_analyser,&arg->mut_analyser);
 	}
 
-	buff->chemin[buff->idxEcrivain]=(char*)malloc(strlen(chemin));
+	buff->chemin[buff->idxEcrivain]=(char*)malloc(strlen(chemin)+1);
 	strcpy(buff->chemin[buff->idxEcrivain],chemin);
+//	printf("Dans buffer fichier %s\n",buff->chemin[buff->idxEcrivain]);
 
 	buff->idxEcrivain=(buff->idxEcrivain+1)%buff->taille;
 	buff->interIdx++;
