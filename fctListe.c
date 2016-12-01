@@ -49,7 +49,11 @@ struct maillon* creerMaillonDossier(char* path)
 		exit(EXIT_FAILURE);
 	}
 
-	maillon->chemin=(char*)malloc(strlen(path)+1);
+	if((maillon->chemin=(char*)malloc(strlen(path)+1))==NULL)
+	{
+		perror("Erreur malloc chemin maillon");
+		exit(EXIT_FAILURE);
+	}
 	strcpy(maillon->chemin,path);
 	maillon->suivant=NULL;
 
@@ -82,6 +86,7 @@ void addBuffFichier(char* chemin,struct bufferFichier* buff,struct argument* arg
 
 	buff->idxEcrivain=(buff->idxEcrivain+1)%buff->taille;
 	buff->interIdx++;
+
 	pthread_mutex_unlock(&arg->mut_analyser);
 }
 
