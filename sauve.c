@@ -415,7 +415,7 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 			}
 		}
 
-		free(cheminSource);
+		free(cheminSauvegarde);
 	}
 	else
 	{
