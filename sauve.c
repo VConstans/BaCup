@@ -28,13 +28,14 @@ int scannerActif=0;
 
 int main(int argc,char* argv[])
 {
-	//TODO controle des arguments
 	int argument;
 
 	struct argument arg;
+	arg.verbeux=0;
+
 	int nbScanner=5;
 	int nbAnalyser=5;
-	int tailleBufferFichier=10;	//TODO changer
+	int tailleBufferFichier=10;
 
 	extern char* optarg;
 	extern int optind;
@@ -44,19 +45,19 @@ int main(int argc,char* argv[])
 		{
 			case 'n':
 				arg.verbeux=1;
-				printf("verbeux\n");
+			//	printf("verbeux\n");
 				break;
 			case 's':
 				nbScanner=atoi(optarg);
-				printf("nb scanner %d\n",atoi(optarg));
+			//	printf("nb scanner %d\n",atoi(optarg));
 				break;
 			case 'a':
 				nbAnalyser=atoi(optarg);
-				printf("nb analyser %d\n",atoi(optarg));
+			//	printf("nb analyser %d\n",atoi(optarg));
 				break;
 			case 'f':
 				tailleBufferFichier=atoi(optarg);
-				printf("taille buffer fichier %d\n",atoi(optarg));
+			//	printf("taille buffer fichier %d\n",atoi(optarg));
 				break;
 		}
 	}
@@ -65,14 +66,14 @@ int main(int argc,char* argv[])
 		case 2:
 			arg.source=argv[optind++];
 			arg.destination=argv[optind];
-			printf("Source %s	destination %s\n",arg.source,arg.destination);
+		//	printf("Source %s	destination %s\n",arg.source,arg.destination);
 			arg.incremental=0;
 			break;
 		case 3:
 			arg.source=argv[optind++];
 			arg.sauvegarde=argv[optind++];
 			arg.destination=argv[optind];
-			printf("Source %s	sauvegarde %s	destination %s\n",arg.source,arg.sauvegarde,arg.destination);
+		//	printf("Source %s	sauvegarde %s	destination %s\n",arg.source,arg.sauvegarde,arg.destination);
 			arg.incremental=1;
 			break;
 		default:
@@ -80,7 +81,6 @@ int main(int argc,char* argv[])
 			exit(EXIT_FAILURE);
 	}
 
-return 0;
 
 	//Initialisation du buffer de dossier
 
@@ -160,17 +160,24 @@ return 0;
 		exit(EXIT_FAILURE);
 	}
 
-	struct stat statSource;
-	if(stat(arg.source,&statSource)!=0)
+	if(arg.verbeux==0)
 	{
-		perror("Erreur stat racine");
-		exit(EXIT_FAILURE);
-	}
+		struct stat statSource;
+		if(stat(arg.source,&statSource)!=0)
+		{
+			perror("Erreur stat racine");
+			exit(EXIT_FAILURE);
+		}
 
-	if(mkdir(arg.destination,statSource.st_mode)!=0)
+		if(mkdir(arg.destination,statSource.st_mode)!=0)
+		{
+			perror("Erreur creation dossier racine");
+			exit(EXIT_FAILURE);
+		}
+	}
+	else
 	{
-		perror("Erreur creation dossier racine");
-		exit(EXIT_FAILURE);
+		printf("Copie dossier %s\n",arg.destination);
 	}
 
 
@@ -240,22 +247,47 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 	int lgAncienChemin=strlen(dossierTraiter->chemin);
 	int lgPrefixeDest=strlen(arg->destination);
 
-	char* cheminSource=(char*)malloc(lgPrefixeSource + lgAncienChemin + 2);
+	char* cheminSource;
+	if((cheminSource=(char*)malloc(lgPrefixeSource + lgAncienChemin + 2))==NULL)
+	{
+		perror("Erreur allocation chaine de caractère pour chemin source");
+		exit(EXIT_FAILURE);
+	}
 	sprintf(cheminSource,"%s/%s",arg->source,dossierTraiter->chemin);
 	int lgcheminSource=strlen(cheminSource);	//XXX peut changer car connait la taille
 
-	//TODO tester resultat
-	DIR* dossier=opendir(cheminSource);
-	struct dirent* entree=(struct dirent*)malloc(sizeof(struct dirent));
+	DIR* dossier;
+	if((dossier=opendir(cheminSource))==NULL)
+	{
+		perror("Erreur ouverture d'un repertoire impossible");
+		exit(EXIT_FAILURE);
+	}
+	struct dirent* entree;
+	if((entree=(struct dirent*)malloc(sizeof(struct dirent)))==NULL)
+	{
+		perror("Erreur allocation d'un entree dans le repertoire");
+		exit(EXIT_FAILURE);
+	}
 
 	while((entree=readdir(dossier))!=NULL)
 	{
 		if(strcmp(entree->d_name,".")!=0 && strcmp(entree->d_name,"..")!=0)
 		{
-			struct stat* info=(struct stat*)malloc(sizeof(struct stat));
+			struct stat* info;
+			if((info=(struct stat*)malloc(sizeof(struct stat)))==NULL)
+			{
+				perror("Erreur allocation de la structure stat d'une entree");
+				exit(EXIT_FAILURE);
+			}
 
 			int lgNom=strlen(entree->d_name);
-			char* newCheminSrc=(char*)malloc(lgcheminSource + lgNom +2);
+
+			char* newCheminSrc;
+			if((newCheminSrc=(char*)malloc(lgcheminSource + lgNom +2))==NULL)
+			{
+				perror("Erreur allocation chaine de caractère du chemin d'une entree");
+				exit(EXIT_FAILURE);
+			}
 			sprintf(newCheminSrc,"%s/%s",cheminSource,entree->d_name);
 
 
@@ -265,41 +297,50 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				exit(EXIT_FAILURE);
 			}
 
+			char* suffixeEntreeSuivante;
+			if((suffixeEntreeSuivante=(char*)malloc(lgAncienChemin + lgNom + 2))==NULL)
+			{
+				perror("Erreur allocation chaine de caractere du suffixe de l'entree");
+				exit(EXIT_FAILURE);
+			}
+			sprintf(suffixeEntreeSuivante,"%s/%s",dossierTraiter->chemin,entree->d_name);
 
 			if(S_ISREG(info->st_mode)!=0)
 			{
-				char* newSuffixeSrc=(char*)malloc(lgAncienChemin + lgNom +2);
-				sprintf(newSuffixeSrc,"%s/%s",dossierTraiter->chemin,entree->d_name);
-
-				addBuffFichier(newSuffixeSrc,bufferFichier,arg);
-				free(newSuffixeSrc);
+				addBuffFichier(suffixeEntreeSuivante,bufferFichier,arg);
 			}
 			if(S_ISDIR(info->st_mode)!=0)
 			{
+				
+				int lgSuffixeEntreeSuivante=strlen(suffixeEntreeSuivante);
 
-				char* suffixeDossierSuivant=(char*)malloc(lgAncienChemin + lgNom + 2);
-				sprintf(suffixeDossierSuivant,"%s/%s",dossierTraiter->chemin,entree->d_name);
-				int lgSuffixeDossierSuivant=strlen(suffixeDossierSuivant);
-
-				char* cheminDossierSuivant=(char*)malloc(lgSuffixeDossierSuivant + lgPrefixeDest + 2);
-				sprintf(cheminDossierSuivant,"%s/%s",arg->destination,suffixeDossierSuivant);
+				char* cheminDossierSuivant;
+				if((cheminDossierSuivant=(char*)malloc(lgSuffixeEntreeSuivante + lgPrefixeDest + 2))==NULL)
+				{
+					perror("Erreur allocation chaine de caractere pour le chemin complet de l'entree");
+					exit(EXIT_FAILURE);
+				}
+				sprintf(cheminDossierSuivant,"%s/%s",arg->destination,suffixeEntreeSuivante);
 
 				if(arg->verbeux==0)
 				{
+					//TODO tester
 					mkdir(cheminDossierSuivant,info->st_mode);
-					struct maillon* maillonDossierSuivant=creerMaillonDossier(suffixeDossierSuivant);
-					pthread_mutex_lock(&arg->mut_scanner);
-					addBuffDossier(maillonDossierSuivant,bufferDossier);
-					pthread_mutex_unlock(&arg->mut_scanner);
-				}
+								}
 				else
 				{
-					printf("Copie dossier %s",suffixeDossierSuivant);
+					printf("Copie dossier %s\n",cheminDossierSuivant);
 				}
+				struct maillon* maillonDossierSuivant=creerMaillonDossier(suffixeEntreeSuivante);
+				pthread_mutex_lock(&arg->mut_scanner);
+				addBuffDossier(maillonDossierSuivant,bufferDossier);
+				pthread_mutex_unlock(&arg->mut_scanner);
 
-				free(suffixeDossierSuivant);
+
+
 				free(cheminDossierSuivant);
 			}
+			free(suffixeEntreeSuivante);
 
 			free(newCheminSrc);
 			free(info);
@@ -307,8 +348,8 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 	
 	}
 
-	closedir(dossier);
 	free(entree);
+	closedir(dossier);
 	free(cheminSource);
 }
 
@@ -371,35 +412,42 @@ void copie(int src,int dest)
 	}
 }
 
-void copieComplete(char* src,char* dest,struct stat* statSource)
+void copieComplete(char* src,char* dest,struct stat* statSource,struct argument* arg)
 {
-	//TODO tester	
-	int fichierDestination;
-	if((fichierDestination=open(dest,O_WRONLY|O_CREAT,statSource->st_mode))==-1)
+	if(arg->verbeux==1)
 	{
-		perror("Erreur ouverture fichier destination");
-		exit(EXIT_FAILURE);
+		printf("Creation fichier %s\n",dest);
 	}
-	int fichierSource;
-	if((fichierSource=open(src,O_RDONLY))==-1)
+	else
 	{
-		perror("Erreur ouverture fichier source");
-		exit(EXIT_FAILURE);
-	}
+		//TODO tester	
+		int fichierDestination;
+		if((fichierDestination=open(dest,O_WRONLY|O_CREAT,statSource->st_mode))==-1)
+		{
+			perror("Erreur ouverture fichier destination");
+			exit(EXIT_FAILURE);
+		}
+		int fichierSource;
+		if((fichierSource=open(src,O_RDONLY))==-1)
+		{
+			perror("Erreur ouverture fichier source");
+			exit(EXIT_FAILURE);
+		}
 
 	
 	
-	copie(fichierSource,fichierDestination);
+		copie(fichierSource,fichierDestination);
 
-	struct utimbuf date;
-	date.actime=statSource->st_atime;
-	date.modtime=statSource->st_mtime;
+		struct utimbuf date;
+		date.actime=statSource->st_atime;
+		date.modtime=statSource->st_mtime;
 
-	//TODO tester
-	utime(dest,&date);
+		//TODO tester
+		utime(dest,&date);
 
-	close(fichierSource);
-	close(fichierDestination);
+		close(fichierSource);
+		close(fichierDestination);
+	}
 }
 
 
@@ -433,7 +481,7 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	
 		if(access(cheminSauvegarde,F_OK)!=0)
 		{
-			copieComplete(cheminSource,cheminDestination,&statSource);
+			copieComplete(cheminSource,cheminDestination,&statSource,arg);
 		}
 		else
 		{
@@ -461,7 +509,7 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 			}
 			else
 			{
-				copieComplete(cheminSource,cheminDestination,&statSource);
+				copieComplete(cheminSource,cheminDestination,&statSource,arg);
 			}
 		}
 
@@ -469,7 +517,7 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	}
 	else
 	{
-		copieComplete(cheminSource,cheminDestination,&statSource);
+		copieComplete(cheminSource,cheminDestination,&statSource,arg);
 	}
 
 	free(cheminSource);
@@ -504,8 +552,9 @@ void* analyser(void* arg)
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
 			char* extrait=extractBuffFichier(bufferFichier,argument);
-			pthread_cond_broadcast(&argument->cond_analyser);
+		//	printf("extrait du buffer %s",extrait);
 			pthread_mutex_unlock(&argument->mut_analyser);
+			pthread_cond_broadcast(&argument->cond_analyser);
 			executionAnalyser(extrait,arg);
 
 			pthread_mutex_lock(&argument->mut_analyser);
