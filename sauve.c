@@ -324,9 +324,12 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 
 				if(arg->verbeux==0)
 				{
-					//TODO tester
-					mkdir(cheminDossierSuivant,info->st_mode);
-								}
+					if(mkdir(cheminDossierSuivant,info->st_mode)==-1)
+					{
+						perror("Erreur création d'un dossier");
+						exit(EXIT_FAILURE);
+					}
+				}
 				else
 				{
 					printf("Copie dossier %s\n",cheminDossierSuivant);
@@ -420,7 +423,6 @@ void copieComplete(char* src,char* dest,struct stat* statSource,struct argument*
 	}
 	else
 	{
-		//TODO tester	
 		int fichierDestination;
 		if((fichierDestination=open(dest,O_WRONLY|O_CREAT,statSource->st_mode))==-1)
 		{
@@ -442,8 +444,11 @@ void copieComplete(char* src,char* dest,struct stat* statSource,struct argument*
 		date.actime=statSource->st_atime;
 		date.modtime=statSource->st_mtime;
 
-		//TODO tester
-		utime(dest,&date);
+		if(utime(dest,&date)!=0)
+		{
+			perror("Erreur changement de date");
+			exit(EXIT_FAILURE);
+		}
 
 		close(fichierSource);
 		close(fichierDestination);
@@ -457,10 +462,20 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	int lgPrefixeSource=strlen(arg->source);
 	int lgPrefixeDest=strlen(arg->destination);
 
-	char* cheminSource=(char*)malloc(lgPrefixeSource + lgSuffixeChemin + 2);
+	char* cheminSource;
+	if((cheminSource=(char*)malloc(lgPrefixeSource + lgSuffixeChemin + 2))==NULL)
+	{
+		perror("Erreur allocation chaine de caractère chemin source");
+		exit(EXIT_FAILURE);
+	}
 	sprintf(cheminSource,"%s/%s",arg->source,suffixeCheminFichier);
 
-	char* cheminDestination=(char*)malloc(lgPrefixeDest + lgSuffixeChemin + 2);
+	char* cheminDestination
+	if((cheminDestination=(char*)malloc(lgPrefixeDest + lgSuffixeChemin + 2))==NULL)
+	{
+		perror("Erreur allocation chaine de caractère chemin destination");
+		exit(EXIT_FAILURE);
+	}
 	sprintf(cheminDestination,"%s/%s",arg->destination,suffixeCheminFichier);
 
 	struct stat statSource;
@@ -474,7 +489,13 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	if(arg->incremental==1)
 	{
 		int lgPrefixeSauvegarde=strlen(arg->sauvegarde);
-		char* cheminSauvegarde=(char*)malloc(lgSuffixeChemin + lgPrefixeSauvegarde + 2);
+
+		char* cheminSauvegarde;
+		if((cheminSauvegarde=(char*)malloc(lgSuffixeChemin + lgPrefixeSauvegarde + 2))==NULL)
+		{
+			perror("Erreur allocation chaine de caractère sauvegarde");
+			exit(EXIT_FAILURE);
+		}
 		sprintf(cheminSauvegarde,"%s/%s",arg->sauvegarde,suffixeCheminFichier);
 
 		struct stat statSauvegarde;
