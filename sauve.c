@@ -29,28 +29,60 @@ int scannerActif=0;
 int main(int argc,char* argv[])
 {
 	//TODO controle des arguments
-//	char* argument;
+	int argument;
 
 	struct argument arg;
+	int nbScanner=5;
+	int nbAnalyser=5;
+	int tailleBufferFichier=10;	//TODO changer
 
 	extern char* optarg;
-	extern int optind, opterr;
-/*	while((argument=getopt(argc,argv,"ns:a:f:")))
+	extern int optind;
+	while((argument=getopt(argc,argv,"ns:a:f:"))!=-1)
 	{
 		switch(argument)
 		{
 			case 'n':
-				if()
-				arg.verbeux=
+				arg.verbeux=1;
+				printf("verbeux\n");
+				break;
+			case 's':
+				nbScanner=atoi(optarg);
+				printf("nb scanner %d\n",atoi(optarg));
+				break;
+			case 'a':
+				nbAnalyser=atoi(optarg);
+				printf("nb analyser %d\n",atoi(optarg));
+				break;
+			case 'f':
+				tailleBufferFichier=atoi(optarg);
+				printf("taille buffer fichier %d\n",atoi(optarg));
+				break;
 		}
 	}
-*/
-	int nbScanner=10;
-	int nbAnalyser=10;
+	switch(argc-optind)
+	{
+		case 2:
+			arg.source=argv[optind++];
+			arg.destination=argv[optind];
+			printf("Source %s	destination %s\n",arg.source,arg.destination);
+			arg.incremental=0;
+			break;
+		case 3:
+			arg.source=argv[optind++];
+			arg.sauvegarde=argv[optind++];
+			arg.destination=argv[optind];
+			printf("Source %s	sauvegarde %s	destination %s\n",arg.source,arg.sauvegarde,arg.destination);
+			arg.incremental=1;
+			break;
+		default:
+			fprintf(stderr,"Usage: %s [-n] [-s n] [-a n] [-f n] source [precedent] destination\n",argv[0]);
+			exit(EXIT_FAILURE);
+	}
 
+return 0;
 
 	//Initialisation du buffer de dossier
-	int tailleBufferFichier=5;	//TODO changer
 
 	struct maillon* racine=creerMaillonDossier(".");
 	if((bufferDossier=(struct bufferDossier*)malloc(sizeof(struct bufferDossier)))==NULL)
@@ -127,11 +159,6 @@ int main(int argc,char* argv[])
 		perror("Erreur creation condition analyser");
 		exit(EXIT_FAILURE);
 	}
-
-	arg.source=argv[1];	//TODO changer
-	arg.destination=argv[2];
-	arg.sauvegarde=argv[3];
-	arg.incremental=0;
 
 	struct stat statSource;
 	if(stat(arg.source,&statSource)!=0)
