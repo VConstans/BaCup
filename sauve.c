@@ -470,7 +470,7 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	}
 	sprintf(cheminSource,"%s/%s",arg->source,suffixeCheminFichier);
 
-	char* cheminDestination
+	char* cheminDestination;
 	if((cheminDestination=(char*)malloc(lgPrefixeDest + lgSuffixeChemin + 2))==NULL)
 	{
 		perror("Erreur allocation chaine de caractère chemin destination");
