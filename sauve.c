@@ -45,12 +45,12 @@ int main(int argc,char* argv[])
 		}
 	}
 */
-	int nbScanner=1;
-	int nbAnalyser=1;
+	int nbScanner=5;
+	int nbAnalyser=5;
 
 
 	//Initialisation du buffer de dossier
-	int tailleBufferFichier=10;	//TODO changer
+	int tailleBufferFichier=1;	//TODO changer
 
 	struct maillon* racine=creerMaillonDossier(".");
 	bufferDossier=(struct bufferDossier*)malloc(sizeof(struct bufferDossier));
@@ -324,7 +324,12 @@ void copie(int src,int dest)
 void copieComplete(char* src,char* dest,struct stat* statSource)
 {
 	//TODO tester	
-	int fichierDestination=open(dest,O_WRONLY|O_CREAT,statSource->st_mode);
+	int fichierDestination;
+	if((fichierDestination=open(dest,O_WRONLY|O_CREAT,statSource->st_mode))==-1)
+	{
+		perror("Erreur ouverture fichier destination");
+		exit(EXIT_FAILURE);
+	}
 	int fichierSource;
 	if((fichierSource=open(src,O_RDONLY))==-1)
 	{
@@ -363,7 +368,7 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	struct stat statSource;
 	if(stat(cheminSource,&statSource)!=0)
 	{
-		perror("Erreur fstat source");
+		perror("Erreur stat source");
 		exit(EXIT_FAILURE);
 	}
 
@@ -455,6 +460,7 @@ void* analyser(void* arg)
 
 			pthread_mutex_lock(&argument->mut_analyser);
 			pthread_mutex_lock(&argument->mut_compt);
+			free(extrait);
 		}
 	}
 }
