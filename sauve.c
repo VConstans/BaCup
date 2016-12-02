@@ -262,16 +262,13 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 		perror("Erreur ouverture d'un repertoire impossible");
 		exit(EXIT_FAILURE);
 	}
-	struct dirent* entree;
-	if((entree=(struct dirent*)malloc(sizeof(struct dirent)))==NULL)
-	{
-		perror("Erreur allocation d'un entree dans le repertoire");
-		exit(EXIT_FAILURE);
-	}
+	struct dirent entree;
+	struct dirent* resultat;
+	int retour_read;
 
-	while((entree=readdir(dossier))!=NULL)
+	while((retour_read=readdir_r(dossier,&entree,&resultat))==0 && resultat!=NULL)
 	{
-		if(strcmp(entree->d_name,".")!=0 && strcmp(entree->d_name,"..")!=0)
+		if(strcmp(entree.d_name,".")!=0 && strcmp(entree.d_name,"..")!=0)
 		{
 			struct stat* info;
 			if((info=(struct stat*)malloc(sizeof(struct stat)))==NULL)
@@ -280,7 +277,7 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				exit(EXIT_FAILURE);
 			}
 
-			int lgNom=strlen(entree->d_name);
+			int lgNom=strlen(entree.d_name);
 
 			char* newCheminSrc;
 			if((newCheminSrc=(char*)malloc(lgcheminSource + lgNom +2))==NULL)
@@ -288,7 +285,7 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				perror("Erreur allocation chaine de caractère du chemin d'une entree");
 				exit(EXIT_FAILURE);
 			}
-			sprintf(newCheminSrc,"%s/%s",cheminSource,entree->d_name);
+			sprintf(newCheminSrc,"%s/%s",cheminSource,entree.d_name);
 
 
 			if(stat(newCheminSrc,info)==-1)
@@ -303,7 +300,7 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				perror("Erreur allocation chaine de caractere du suffixe de l'entree");
 				exit(EXIT_FAILURE);
 			}
-			sprintf(suffixeEntreeSuivante,"%s/%s",dossierTraiter->chemin,entree->d_name);
+			sprintf(suffixeEntreeSuivante,"%s/%s",dossierTraiter->chemin,entree.d_name);
 
 			if(S_ISREG(info->st_mode)!=0)
 			{
@@ -348,10 +345,13 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 			free(newCheminSrc);
 			free(info);
 		}
-	
+	}
+	if(retour_read!=0)
+	{
+		perror("Erreur readdir_t");
+		exit(EXIT_FAILURE);
 	}
 
-	free(entree);
 	closedir(dossier);
 	free(cheminSource);
 }
