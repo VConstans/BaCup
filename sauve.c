@@ -235,26 +235,23 @@ int main(int argc,char* argv[])
 }
 
 
-
-
-
-
+char* creerChemin(char* A, char* B)
+{
+	char* chemin;
+	if((chemin=(char*)malloc(strlen(A) + strlen(B) + 2))==NULL)
+	{
+		perror("Erreur allocation chemin");
+		exit(EXIT_FAILURE);
+	}
+	sprintf(chemin,"%s/%s",A,B);
+	return chemin;
+}
 
 
 void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 {
-	int lgPrefixeSource=strlen(arg->source);
-	int lgAncienChemin=strlen(dossierTraiter->chemin);
-	int lgPrefixeDest=strlen(arg->destination);
-
 	char* cheminSource;
-	if((cheminSource=(char*)malloc(lgPrefixeSource + lgAncienChemin + 2))==NULL)
-	{
-		perror("Erreur allocation chaine de caractère pour chemin source");
-		exit(EXIT_FAILURE);
-	}
-	sprintf(cheminSource,"%s/%s",arg->source,dossierTraiter->chemin);
-	int lgcheminSource=strlen(cheminSource);	//XXX peut changer car connait la taille
+	cheminSource=creerChemin(arg->source,dossierTraiter->chemin);
 
 	DIR* dossier;
 	if((dossier=opendir(cheminSource))==NULL)
@@ -277,15 +274,8 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				exit(EXIT_FAILURE);
 			}
 
-			int lgNom=strlen(entree.d_name);
-
 			char* newCheminSrc;
-			if((newCheminSrc=(char*)malloc(lgcheminSource + lgNom +2))==NULL)
-			{
-				perror("Erreur allocation chaine de caractère du chemin d'une entree");
-				exit(EXIT_FAILURE);
-			}
-			sprintf(newCheminSrc,"%s/%s",cheminSource,entree.d_name);
+			newCheminSrc=creerChemin(cheminSource,entree.d_name);
 
 
 			if(stat(newCheminSrc,info)==-1)
@@ -295,12 +285,7 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 			}
 
 			char* suffixeEntreeSuivante;
-			if((suffixeEntreeSuivante=(char*)malloc(lgAncienChemin + lgNom + 2))==NULL)
-			{
-				perror("Erreur allocation chaine de caractere du suffixe de l'entree");
-				exit(EXIT_FAILURE);
-			}
-			sprintf(suffixeEntreeSuivante,"%s/%s",dossierTraiter->chemin,entree.d_name);
+			suffixeEntreeSuivante=creerChemin(dossierTraiter->chemin,entree.d_name);
 
 			if(S_ISREG(info->st_mode)!=0)
 			{
@@ -308,16 +293,8 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 			}
 			if(S_ISDIR(info->st_mode)!=0)
 			{
-				
-				int lgSuffixeEntreeSuivante=strlen(suffixeEntreeSuivante);
-
 				char* cheminDossierSuivant;
-				if((cheminDossierSuivant=(char*)malloc(lgSuffixeEntreeSuivante + lgPrefixeDest + 2))==NULL)
-				{
-					perror("Erreur allocation chaine de caractere pour le chemin complet de l'entree");
-					exit(EXIT_FAILURE);
-				}
-				sprintf(cheminDossierSuivant,"%s/%s",arg->destination,suffixeEntreeSuivante);
+				cheminDossierSuivant=creerChemin(arg->destination,suffixeEntreeSuivante);
 
 				if(arg->verbeux==0)
 				{
@@ -376,7 +353,7 @@ void* scanner(void* arg)
 			pthread_mutex_unlock(&argument->mut_compt);
 			pthread_cond_broadcast(&argument->cond_scanner);
 			pthread_mutex_unlock(&argument->mut_scanner);
-			pthread_exit(NULL);
+			return (NULL);
 		}
 		else
 		{
@@ -458,25 +435,11 @@ void copieComplete(char* src,char* dest,struct stat* statSource,struct argument*
 
 void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 {
-	int lgSuffixeChemin=strlen(suffixeCheminFichier);
-	int lgPrefixeSource=strlen(arg->source);
-	int lgPrefixeDest=strlen(arg->destination);
-
 	char* cheminSource;
-	if((cheminSource=(char*)malloc(lgPrefixeSource + lgSuffixeChemin + 2))==NULL)
-	{
-		perror("Erreur allocation chaine de caractère chemin source");
-		exit(EXIT_FAILURE);
-	}
-	sprintf(cheminSource,"%s/%s",arg->source,suffixeCheminFichier);
+	cheminSource=creerChemin(arg->source,suffixeCheminFichier);
 
 	char* cheminDestination;
-	if((cheminDestination=(char*)malloc(lgPrefixeDest + lgSuffixeChemin + 2))==NULL)
-	{
-		perror("Erreur allocation chaine de caractère chemin destination");
-		exit(EXIT_FAILURE);
-	}
-	sprintf(cheminDestination,"%s/%s",arg->destination,suffixeCheminFichier);
+	cheminDestination=creerChemin(arg->destination,suffixeCheminFichier);
 
 	struct stat statSource;
 	if(stat(cheminSource,&statSource)!=0)
@@ -488,15 +451,9 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 
 	if(arg->incremental==1)
 	{
-		int lgPrefixeSauvegarde=strlen(arg->sauvegarde);
 
 		char* cheminSauvegarde;
-		if((cheminSauvegarde=(char*)malloc(lgSuffixeChemin + lgPrefixeSauvegarde + 2))==NULL)
-		{
-			perror("Erreur allocation chaine de caractère sauvegarde");
-			exit(EXIT_FAILURE);
-		}
-		sprintf(cheminSauvegarde,"%s/%s",arg->sauvegarde,suffixeCheminFichier);
+		cheminSauvegarde=creerChemin(arg->sauvegarde,suffixeCheminFichier);
 
 		struct stat statSauvegarde;
 	
@@ -567,7 +524,7 @@ void* analyser(void* arg)
 			pthread_mutex_unlock(&argument->mut_compt);
 			pthread_cond_broadcast(&argument->cond_analyser);
 			pthread_mutex_unlock(&argument->mut_analyser);
-			pthread_exit(NULL);
+			return (NULL);
 		}
 		else
 		{
@@ -575,12 +532,12 @@ void* analyser(void* arg)
 			char* extrait=extractBuffFichier(bufferFichier,argument);
 		//	printf("extrait du buffer %s",extrait);
 			pthread_mutex_unlock(&argument->mut_analyser);
-			pthread_cond_broadcast(&argument->cond_analyser);
 			executionAnalyser(extrait,arg);
 
 			pthread_mutex_lock(&argument->mut_analyser);
 			pthread_mutex_lock(&argument->mut_compt);
 			free(extrait);
+			pthread_cond_broadcast(&argument->cond_analyser);
 		}
 	}
 }

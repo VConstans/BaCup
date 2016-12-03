@@ -82,7 +82,7 @@ void addBuffFichier(char* chemin,struct bufferFichier* buff,struct argument* arg
 
 	buff->chemin[buff->idxEcrivain]=(char*)malloc(strlen(chemin)+1);
 	strcpy(buff->chemin[buff->idxEcrivain],chemin);
-//	printf("Dans buffer fichier %s\n",buff->chemin[buff->idxEcrivain]);
+//	printf("=================>add fichier %s\n",buff->chemin[buff->idxEcrivain]);
 
 	buff->idxEcrivain=(buff->idxEcrivain+1)%buff->taille;
 	buff->interIdx++;
@@ -97,6 +97,7 @@ char* extractBuffFichier(struct bufferFichier* buff,struct argument* arg)
 		pthread_cond_wait(&arg->cond_analyser,&arg->mut_analyser);
 	}
 	char* tmp=buff->chemin[buff->idxLecteur];
+//	printf("==============++>extract fichier %s\n",buff->chemin[buff->idxLecteur]);
 	buff->idxLecteur=(buff->idxLecteur+1)%buff->taille;
 	buff->interIdx--;
 	return tmp;

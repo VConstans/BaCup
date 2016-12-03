@@ -18,11 +18,11 @@ struct bufferDossier
 
 struct bufferFichier
 {
-	char** chemin;
 	int taille;
 	int idxLecteur;
 	int idxEcrivain;
 	int interIdx;
+	char** chemin;
 };
 
 #endif
