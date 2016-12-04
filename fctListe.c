@@ -21,15 +21,6 @@ void addBuffDossier(struct maillon* maillon,struct bufferDossier* buff)
 	buff->dernier=maillon;
 }
 
-/*
-void rmBuffDossier(struct bufferDossier* buff)
-{
-	struct maillon* tmp=buff->liste;
-	buff->liste=buff->liste->suivant;
-	free(tmp->chemin);
-	free(tmp);
-}
-*/
 
 /* Extraction du prochain dossier a traiter
  */
@@ -94,18 +85,15 @@ void addBuffFichier(char* chemin,struct bufferFichier* buff,struct argument* arg
 	buff->idxEcrivain=(buff->idxEcrivain+1)%buff->taille;
 	buff->interIdx++;
 
+	pthread_cond_signal(&arg->cond_analyser);
 	pthread_mutex_unlock(&arg->mut_analyser);
 }
 
 
 /* Extrait l'element suivant du buffer de fichier et le revoie
  */
-char* extractBuffFichier(struct bufferFichier* buff/*,struct argument* arg*/)
+char* extractBuffFichier(struct bufferFichier* buff)
 {
-/*	while(buff->interIdx<=0)
-	{
-		pthread_cond_wait(&arg->cond_analyser,&arg->mut_analyser);
-	}*/
 	char* tmp=buff->chemin[buff->idxLecteur];
 	buff->idxLecteur=(buff->idxLecteur+1)%buff->taille;
 	buff->interIdx--;

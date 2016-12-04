@@ -181,6 +181,7 @@ void* scanner(void* arg)
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
 			pthread_cond_broadcast(&argument->cond_scanner);
+			pthread_cond_broadcast(&argument->cond_analyser);
 			pthread_mutex_unlock(&argument->mut_scanner);
 			return (NULL);
 		}
@@ -203,8 +204,8 @@ void* scanner(void* arg)
 			/* Avertissement des scanner et des analyser qu'il
 			 * potentiellement de nouveau element dans les buffer
 			 */
-			pthread_cond_broadcast(&argument->cond_scanner);
-			pthread_cond_broadcast(&argument->cond_analyser);
+			pthread_cond_signal(&argument->cond_scanner);
+			pthread_cond_signal(&argument->cond_analyser);
 			pthread_mutex_lock(&argument->mut_scanner);
 
 			pthread_mutex_lock(&argument->mut_compt);
@@ -391,7 +392,6 @@ void* analyser(void* arg)
 		if(bufferFichier->interIdx==0 && scannerActif==0)
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
-			pthread_cond_broadcast(&argument->cond_analyser);
 			pthread_mutex_unlock(&argument->mut_analyser);
 			return (NULL);
 		}
@@ -401,11 +401,11 @@ void* analyser(void* arg)
 			pthread_mutex_unlock(&argument->mut_compt);
 
 			//Extraction du fichier a traiter
-			char* extrait=extractBuffFichier(bufferFichier/*,argument*/);
-			pthread_cond_broadcast(&argument->cond_analyser);
+			char* extrait=extractBuffFichier(bufferFichier);
 
 			pthread_mutex_unlock(&argument->mut_analyser);
 
+			pthread_cond_signal(&argument->cond_analyser);
 			//Traitement du fichier
 			executionAnalyser(extrait,arg);
 
@@ -540,6 +540,7 @@ int main(int argc,char* argv[])
 
 	//Initialisation des arguments à passer aux threads
 
+	//Mutex de verrouillage du buffer de dossier
 	if(pthread_mutex_init(&arg.mut_scanner,NULL)!=0)
 	{
 		perror("Erreur creation mutex Scanner");
@@ -553,6 +554,7 @@ int main(int argc,char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	//Mutex de verrouillage du buffer de fichier
 	if(pthread_mutex_init(&arg.mut_analyser,NULL)!=0)
 	{
 		perror("Erreur creation mutex analyser");
@@ -566,6 +568,7 @@ int main(int argc,char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	//Mutex de verrouillage de la variable du nombre de scanner actif
 	if(pthread_mutex_init(&arg.mut_compt,NULL)!=0)
 	{
 		perror("Erreur creation mutex analyser");
@@ -579,6 +582,7 @@ int main(int argc,char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	//Variable condition lorsque le buffer dossier est vide
 	if(pthread_cond_init(&arg.cond_scanner,NULL)!=0)
 	{
 		perror("Erreur creation condition scanner");
@@ -592,6 +596,7 @@ int main(int argc,char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	//Variable condition lorsque le buffer dossier est plein
 	if(pthread_cond_init(&arg.cond_analyser,NULL)!=0)
 	{
 		perror("Erreur creation condition analyser");
@@ -635,7 +640,7 @@ int main(int argc,char* argv[])
 	}
 	else
 	{
-		printf("Copie dossier %s\n",arg.destination);
+		printf("Création dossier %s\n",arg.destination);
 	}
 
 

@@ -1,93 +1,71 @@
-Pour la sauvegarde d'une arborescence, on utilise de type de thread:
+Pour la sauvegarde d'une arborescence, on utilise deux types de thread:
 - des threads scanneur
 - des threads analyseur
 
 Les threads scanner (qui vont scanner l'arborescence et remplir le
 buffer de fichier et le buffer de dossier) vont boucler jusqu'à ce que
 le buffer de dossier soit vide (ce qui indique qu'il n'y a plus de dossier
-à scanner et d'arborescence à copier) et qu'il n'y a plus d'autre scanneur actif
-qui pourrait être susceptible de remplir le buffer de fichier et de continuer à
-copier l'arborescence.
-Dans le cas où le buffer dossier est vide mais qu'il y a encore des scanners
+à scanner et d'arborescence à copier) et qu'il n'y a plus d'autres scanneurs actifs
+qui pourraient être susceptible de remplir le buffer de fichier et de continuer à
+copier l'arborescence. Dans ce cas là, le travail des threads scanneurs et analyseurs
+est terminé, le thread va réveiller tous les autres scanneurs et analyseurs qui étaient en
+attente que le dernier scanneur finisse son travail.
+Dans le cas où le buffer dossier est vide mais qu'il y a encore des scanneurs
 qui peuvent remplir ce buffer, alors le thread va se mettre en attente
 conditionnelle.  L'attente prendra fin lorsqu'un autre thread scanneur aura
-finit de scanner et de traiter un repertoire et aura potentiellement ajouter
+fini de scanner et de traiter un répertoire et aura potentiellement ajouté
 des dossiers à scanner dans le buffer de dossier.
-Pour synchroniser les différents threads scanners entre eux, le programme
-deux mutex et une variable condition (dont nous venons de voir l'utilité
+Pour synchroniser les différents threads scanneurs entre eux, le programme
+utilise deux mutex et une variable condition (dont nous venons de voir l'utilité
 et qui permet d'avoir une attente passive lorsqu'il n'y a pas de travail
-immédiat pour un thread). Concernant les mutex: un sert à verouiller l'accès
-au buffer de dossier et l'autre sert à verrouiller l'accès à la variable
-comptabilisant le nombre de scanneur encore actifs. Ces deux mutex sont
+immédiat pour un thread). Concernant les mutex: un sert à vérouiller l'accès
+au buffer de dossier et l'autre sert à vérrouiller l'accès à la variable
+comptabilisant le nombre de scanneurs encore actifs. Ces deux mutex sont
 verrouillés lors des tests de vacuités du buffer de dossier et de présence
-de scanneur encore actifs pour savoir si le thread doit s'arrêter ou non.
-Ils vont être dévérouillés après l'extraction du repertoire à traiter par
+de scanneur encore actif pour savoir si le thread doit s'arrêter ou non.
+Ils vont être dévérouillés après l'extraction du répertoire à traiter par
 le thread pour permettre à des autres threads d'avoir accès au buffer et de
-pouvoir extraire et traiter les autres repertoire présent dans le buffer
+pouvoir extraire et traiter les autres répertoires présents dans le buffer
 de manière parallèle les uns aux autres. Cela permet de tirer partit du
 paraléllisme sans que le différents thread ne traite un même répertoire.
-Le mutex qui verrouille le compteur de scanneur actif pourrait sembler
-inutile étant donnée qu'il est verouillé et déverrouillé en même temps
+Le mutex qui vérrouille le compteur de scanneur actif pourrait sembler
+inutile étant donné qu'il est vérouillé et déverrouillé en même temps
 que le mutex de buffer de dossier, mais il y a un cas où il n'est pas
-verouillé en même temps que le mutex de buffer de dossier, lorsqu'un scanneur va rajouter un
+vérouillé en même temps que le mutex de buffer de dossier, lorsqu'un scanneur va rajouter un
 répertoire dans le buffer de dossier; alors que le mutex de buffer de dossier
-est lui, bien verouiller à ce moment là.  Cela permet entre autre aux analyseur
-d'accéder au nombre de scanner actif sans être bloqué par une écriture dans le
+est lui, bien vérouiller à ce moment là.  Cela permet entre autre aux analyseurs
+d'accéder au nombre de scanner actif sans être bloqués par une écriture dans le
 buffer de dossier qui ne change pas le nombre de scanner actif.
-Un dernier mutex (dont nous parlerons plus tard) est utilisé pour verrouiller
-l'accès au buffer de fichier lorsque qu'un scanner détecte un fichier dans le
-repertoire qu'il est entrain de traiter et qu'il l'ajoute de ce buffer pour qu'il
+Un dernier mutex (dont nous parlerons plus tard) est utilisé pour vérrouiller
+l'accès au buffer de fichier lorsqu'un scanneur détecte un fichier dans le
+répertoire qu'il est entrain de traiter et qu'il l'ajoute de ce buffer pour qu'il
 soit traiter par un analyseur.
-Lors de l'ajout d'un fichier dans le buffer de fichier, une variable condition est utilisé : celle-ci 
+Lors de l'ajout d'un fichier dans le buffer de fichier, une variable condition est utilisée : celle-ci 
 met le threads qui voulait faire un ajout dans ce buffer en attente lorsque celui-ci est plein.
-Cette attente prendra fin lorsque qu'un analyseur aura extrait un fichier du buffer,
-créant a nouveau une place de libre.
+Cette attente prendra fin lorsqu'un analyseur aura extrait un fichier du buffer,
+créant à nouveau une place de libre.
 
 
 
-Les threads analyseur (qui vont s'occuper de copier les fichier mis dans le buffer
+Les threads analyseurs (qui vont s'occuper de copier les fichier mis dans le buffer
 de fichier par les scanneurs) ont une boucle de fonctionnement similaire à celle
 des scanneurs. Ils vont eux aussi s'arrêter lorsque que le buffer de fichier
-est vide et qu'il n'y a plus de scanneur actifs susceptible de le remplir.
-Tout comme les scanneurs ils vont entrer un attente conditionnelle si le buffer
-est vide mais qu'il reste des scanneurs actif. Cette attente prendra fin lorsqu'un
-scanneur aura finit sont traitement d'un repertoire et qu'il à pu possiblement
-ajouter des fichier à traiter dans le buffer de fichier. 
-Pour se synchroniser entre eux, les analyseurs utilise un mutex d'accès au buffer
+est vide et qu'il n'y a plus de scanneurs actifs susceptible de le remplir.
+Tout comme les scanneurs ils vont entrer en attente conditionnelle si le buffer
+est vide mais qu'il reste des scanneurs actifs. Cette attente prendra fin lorsqu'un
+scanneur aura fini son traitement d'un répertoire et qu'il a pu possiblement
+ajouter des fichiers à traiter dans le buffer de fichier. 
+Pour se synchroniser entre eux, les analyseurs utilisent un mutex d'accès au buffer
 de fichier, et la variable condition permettant l'attente passive de
 remplissage du buffer de fichier. Ils utilisent donc aussi le mutex permettant
 l'accès exclusif au nombre de scanneurs actif pour tester leur codition d'arrêt.
-De manière similaire aux scanneurs, les analyseurs vont verrouiller les mutex
+De manière similaire aux scanneurs, les analyseurs vont vérrouiller les mutex
 d'accès au buffer de fichier et de nombre de scanneurs actif pour tester ces
-conditions d'attente et d'arrêt. Une fois ces tests passé et le fichier à copier
+conditions d'attente et d'arrêt. Une fois ces tests passés et le fichier à copier
 extrait du buffer, les mutex sont déverouillés pour permettre à un autre analyseur
-de traiter un autre fichier. Les différents analyseur peuvent donc faire le
-traitement des leur fichier de manière parallèle et indépendante les uns des autres.
+de traiter un autre fichier. Les différents analyseurs peuvent donc faire le
+traitement de leurs fichiers de manière parallèle et indépendante les uns des autres.
 
 
-
-
-
-
-
-
-
-
-
-
-//TODO attente lorsque le buffer est plein
-//TODO parler des threads qui reveille les autres lorsqu'ils sont terminé
-
-
-
-
-
-
-
-
-
-
-
-
-Finalement le programme se termine lorsque tout les scanneurs et analyseurs se termine,
-ce qui signifie que l'arborescence à été totalement copier.
+Finalement le programme se termine lorsque tous les scanneurs et analyseurs se terminent,
+ce qui signifie que l'arborescence a été totalement copiée.
