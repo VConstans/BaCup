@@ -95,7 +95,7 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 			{
 				//Ajout du chemin relatif de l'element dans le buffer de fichier
 				addBuffFichier(suffixeEntreeSuivante,bufferFichier,arg);
-				pthread_cond_broadcast(&arg->cond_analyser);
+				pthread_cond_signal(&arg->cond_analyser);
 			}
 
 			// Si l'element est un dossier
@@ -132,7 +132,7 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				addBuffDossier(maillonDossierSuivant,bufferDossier);
 				pthread_mutex_unlock(&arg->mut_scanner);
 
-				pthread_cond_broadcast(&arg->cond_scanner);
+				pthread_cond_signal(&arg->cond_scanner);
 
 
 				free(cheminDossierSuivant);
@@ -405,7 +405,7 @@ void* analyser(void* arg)
 
 			pthread_mutex_unlock(&argument->mut_analyser);
 
-			pthread_cond_broadcast(&argument->cond_analyser);
+			pthread_cond_signal(&argument->cond_analyser);
 			//Traitement du fichier
 			executionAnalyser(extrait,arg);
 
