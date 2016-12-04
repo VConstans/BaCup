@@ -6,6 +6,8 @@
 #include "argument.h"
 #include "fctListe.h"
 
+/* Ajoute le repertoire passe en parametre dans le buffer de dossier
+ */
 void addBuffDossier(struct maillon* maillon,struct bufferDossier* buff)
 {
 	if(buff->liste==NULL)
@@ -19,7 +21,7 @@ void addBuffDossier(struct maillon* maillon,struct bufferDossier* buff)
 	buff->dernier=maillon;
 }
 
-
+/*
 void rmBuffDossier(struct bufferDossier* buff)
 {
 	struct maillon* tmp=buff->liste;
@@ -27,8 +29,10 @@ void rmBuffDossier(struct bufferDossier* buff)
 	free(tmp->chemin);
 	free(tmp);
 }
+*/
 
-
+/* Extraction du prochain dossier a traiter
+ */
 struct maillon* extractBuffDossier(struct bufferDossier* buff)
 {
 	struct maillon* tmp = buff->liste;
@@ -40,6 +44,9 @@ struct maillon* extractBuffDossier(struct bufferDossier* buff)
 	return tmp;
 }
 
+/* Creation d'un maillon de la liste chaine avec le chemin
+ * du dossier passe en parametre
+ */
 struct maillon* creerMaillonDossier(char* path)
 {
 	struct maillon* maillon;
@@ -60,8 +67,8 @@ struct maillon* creerMaillonDossier(char* path)
 	return maillon;
 }
 
-
-//TODO lock
+/* Liberation de la memoire du maillon passe en parametre
+ */
 void rmMaillonDossier(struct maillon* maillon)
 {
 	free(maillon->chemin);
@@ -71,7 +78,8 @@ void rmMaillonDossier(struct maillon* maillon)
 
 /**********************************************************************/
 
-
+/* Ajout du chemin du fichier passe en parametre dans le buffer de fichier
+ */
 void addBuffFichier(char* chemin,struct bufferFichier* buff,struct argument* arg)
 {
 	pthread_mutex_lock(&arg->mut_analyser);
@@ -82,7 +90,6 @@ void addBuffFichier(char* chemin,struct bufferFichier* buff,struct argument* arg
 
 	buff->chemin[buff->idxEcrivain]=(char*)malloc(strlen(chemin)+1);
 	strcpy(buff->chemin[buff->idxEcrivain],chemin);
-//	printf("=================>add fichier %s\n",buff->chemin[buff->idxEcrivain]);
 
 	buff->idxEcrivain=(buff->idxEcrivain+1)%buff->taille;
 	buff->interIdx++;
@@ -90,14 +97,16 @@ void addBuffFichier(char* chemin,struct bufferFichier* buff,struct argument* arg
 	pthread_mutex_unlock(&arg->mut_analyser);
 }
 
-char* extractBuffFichier(struct bufferFichier* buff,struct argument* arg)
+
+/* Extrait l'element suivant du buffer de fichier et le revoie
+ */
+char* extractBuffFichier(struct bufferFichier* buff/*,struct argument* arg*/)
 {
-	while(buff->interIdx<=0)
+/*	while(buff->interIdx<=0)
 	{
 		pthread_cond_wait(&arg->cond_analyser,&arg->mut_analyser);
-	}
+	}*/
 	char* tmp=buff->chemin[buff->idxLecteur];
-//	printf("==============++>extract fichier %s\n",buff->chemin[buff->idxLecteur]);
 	buff->idxLecteur=(buff->idxLecteur+1)%buff->taille;
 	buff->interIdx--;
 	return tmp;

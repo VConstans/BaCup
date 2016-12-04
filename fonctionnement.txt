@@ -38,6 +38,11 @@ Un dernier mutex (dont nous parlerons plus tard) est utilisé pour verrouiller
 l'accès au buffer de fichier lorsque qu'un scanner détecte un fichier dans le
 repertoire qu'il est entrain de traiter et qu'il l'ajoute de ce buffer pour qu'il
 soit traiter par un analyseur.
+Lors de l'ajout d'un fichier dans le buffer de fichier, une variable condition est utilisé : celle-ci 
+met le threads qui voulait faire un ajout dans ce buffer en attente lorsque celui-ci est plein.
+Cette attente prendra fin lorsque qu'un analyseur aura extrait un fichier du buffer,
+créant a nouveau une place de libre.
+
 
 
 Les threads analyseur (qui vont s'occuper de copier les fichier mis dans le buffer
@@ -49,7 +54,7 @@ est vide mais qu'il reste des scanneurs actif. Cette attente prendra fin lorsqu'
 scanneur aura finit sont traitement d'un repertoire et qu'il à pu possiblement
 ajouter des fichier à traiter dans le buffer de fichier. 
 Pour se synchroniser entre eux, les analyseurs utilise un mutex d'accès au buffer
-de fichieri, et la variable condition permettant l'attente passive de
+de fichier, et la variable condition permettant l'attente passive de
 remplissage du buffer de fichier. Ils utilisent donc aussi le mutex permettant
 l'accès exclusif au nombre de scanneurs actif pour tester leur codition d'arrêt.
 De manière similaire aux scanneurs, les analyseurs vont verrouiller les mutex
@@ -57,9 +62,7 @@ d'accès au buffer de fichier et de nombre de scanneurs actif pour tester ces
 conditions d'attente et d'arrêt. Une fois ces tests passé et le fichier à copier
 extrait du buffer, les mutex sont déverouillés pour permettre à un autre analyseur
 de traiter un autre fichier. Les différents analyseur peuvent donc faire le
-traitement des leur fichier de manière parallèl et indépendante les uns des autres.
-
-
+traitement des leur fichier de manière parallèle et indépendante les uns des autres.
 
 
 

@@ -14,19 +14,15 @@
 
 
 
-
+//Déclaration des deux buffers et du compteur de scanner actif
 struct bufferDossier* bufferDossier=NULL;
 struct bufferFichier* bufferFichier=NULL;
 int scannerActif=0;
 
 
-
-
-
-
-
-
-
+/* Cree un nouveau chemin compose de deux chaine de caractere separe pour un
+ * slash
+ */
 char* creerChemin(char* A, char* B)
 {
 	char* chemin;
@@ -40,8 +36,17 @@ char* creerChemin(char* A, char* B)
 }
 
 
+/* Fonction d'execution des threads scanner qui va scanner un repertoire passe en
+ * parametre et ajouter les elements composant ce repertoire soit dans le buffer
+ * de fichier soit dans le buffer de dossier selon la nature de l'element.
+ * Si c'est un dossier il s'occuper aussi de creer celui-ci dans l'arborescence copie
+ */
 void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 {
+	/* Le chemin contenu dans le buffer etant le chemin relatif par
+	 * rapport a la racine source, il faut creer le chemin complet
+	 * etant le chemin de la racine et le chemin relatif a cette racine
+	 */
 	char* cheminSource;
 	cheminSource=creerChemin(arg->source,dossierTraiter->chemin);
 
@@ -66,6 +71,7 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				exit(EXIT_FAILURE);
 			}
 
+			//Creation du chemins des elements du repertoire source
 			char* newCheminSrc;
 			newCheminSrc=creerChemin(cheminSource,entree.d_name);
 
@@ -76,20 +82,35 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				exit(EXIT_FAILURE);
 			}
 
+			
+			/* Chemin de l'element du repertoire relatif a la racine
+			 * (ne contient ni le chemin de la racine ni le chemin de
+			 * la destination
+			 */
 			char* suffixeEntreeSuivante;
 			suffixeEntreeSuivante=creerChemin(dossierTraiter->chemin,entree.d_name);
 
+			// Si l'element est un fichier
 			if(S_ISREG(info->st_mode)!=0)
 			{
+				//Ajout du chemin relatif de l'element dans le buffer de fichier
 				addBuffFichier(suffixeEntreeSuivante,bufferFichier,arg);
 			}
+
+			// Si l'element est un dossier
 			if(S_ISDIR(info->st_mode)!=0)
 			{
+				/* Creation du chemin de copie de l'element: c'est a dire, le chemin
+				 * compose du chemin de la racine de copie et du chemin relatif de
+				 * l'element
+				 */
 				char* cheminDossierSuivant;
 				cheminDossierSuivant=creerChemin(arg->destination,suffixeEntreeSuivante);
 
+				//Si le programme n'est pas en mode verbeux
 				if(arg->verbeux==0)
 				{
+					//Creation du dossier dans l'arborescence de copie
 					if(mkdir(cheminDossierSuivant,info->st_mode)==-1)
 					{
 						perror("Erreur création d'un dossier");
@@ -98,8 +119,13 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 				}
 				else
 				{
-					printf("Copie dossier %s\n",cheminDossierSuivant);
+					//Si on est en mode verbeux
+					printf("Creation dossier %s\n",cheminDossierSuivant);
 				}
+
+				/*On ajoute l'element dans le buffer des dossier
+				 * pour qu'il soit scanner
+				 */
 				struct maillon* maillonDossierSuivant=creerMaillonDossier(suffixeEntreeSuivante);
 				pthread_mutex_lock(&arg->mut_scanner);
 				addBuffDossier(maillonDossierSuivant,bufferDossier);
@@ -126,20 +152,31 @@ void executionScanner(struct maillon* dossierTraiter,struct argument* arg)
 }
 
 
+
 void* scanner(void* arg)
 {
 	struct argument* argument=(struct argument*)arg;
 
+	/* Verouillage du buffer de dossier et du compteur
+	 * de scanner actif
+	 */
 	pthread_mutex_lock(&argument->mut_scanner);
 	pthread_mutex_lock(&argument->mut_compt);
 	while(1)
 	{
+		/* Si le buffer dossier est vide mais qu'il reste
+		 * des scanner actif
+		 */
 		while(bufferDossier->liste==NULL && scannerActif!=0)
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
 			pthread_cond_wait(&argument->cond_scanner,&argument->mut_scanner);
 			pthread_mutex_lock(&argument->mut_compt);
 		}
+
+		/* Si le buffer de dossier est vide mais qu'il n'y
+		 * a plus de scanner actif
+		 */
 		if(bufferDossier->liste==NULL && scannerActif==0)
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
@@ -147,19 +184,26 @@ void* scanner(void* arg)
 			pthread_mutex_unlock(&argument->mut_scanner);
 			return (NULL);
 		}
+
+		// Si il y a des dossier dans le buffer de dossier
 		else
 		{
 			scannerActif++;
 			pthread_mutex_unlock(&argument->mut_compt);
 
+			//Extraction du repertoire a traiter
 			struct maillon* extrait;
 			extrait=extractBuffDossier(bufferDossier);
 
 			pthread_mutex_unlock(&argument->mut_scanner);
 
+			//Traitement du repertoire à scanner
 			executionScanner(extrait,argument);
 
-			pthread_cond_broadcast(&argument->cond_scanner);	//XXX utile?
+			/* Avertissement des scanner et des analyser qu'il
+			 * potentiellement de nouveau element dans les buffer
+			 */
+			pthread_cond_broadcast(&argument->cond_scanner);
 			pthread_cond_broadcast(&argument->cond_analyser);
 			pthread_mutex_lock(&argument->mut_scanner);
 
@@ -173,6 +217,8 @@ void* scanner(void* arg)
 
 /***************************************************************/
 
+/* Copie le contenu d'un fichier source vers un fichier destination
+ */
 void copie(int src,int dest)
 {
 	char* bufferCopie[1024];
@@ -184,20 +230,27 @@ void copie(int src,int dest)
 	}
 }
 
+
+/* Prepare la copie d'un fichier source vers un fichier destination.
+ */
 void copieComplete(char* src,char* dest,struct stat* statSource,struct argument* arg)
 {
+	// Si le programme est en mode verbeux
 	if(arg->verbeux==1)
 	{
-		printf("Creation fichier %s\n",dest);
+		printf("Copie fichier %s vers %s\n",src,dest);
 	}
 	else
 	{
+		// Creation du fichier destination et ouverture de celui ci
 		int fichierDestination;
 		if((fichierDestination=open(dest,O_WRONLY|O_CREAT,statSource->st_mode))==-1)
 		{
 			perror("Erreur ouverture fichier destination");
 			exit(EXIT_FAILURE);
 		}
+
+		//Ouverture du fichier source
 		int fichierSource;
 		if((fichierSource=open(src,O_RDONLY))==-1)
 		{
@@ -206,13 +259,14 @@ void copieComplete(char* src,char* dest,struct stat* statSource,struct argument*
 		}
 
 	
-	
+		//Copie du fichier source vers le fichier destination
 		copie(fichierSource,fichierDestination);
 
 		struct utimbuf date;
 		date.actime=statSource->st_atime;
 		date.modtime=statSource->st_mtime;
 
+		//Mise a jour de la date
 		if(utime(dest,&date)!=0)
 		{
 			perror("Erreur changement de date");
@@ -227,9 +281,15 @@ void copieComplete(char* src,char* dest,struct stat* statSource,struct argument*
 
 void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 {
+	/* Creation du chemin source complet (chemin de la racine 
+	 * et du chemin relatif a la racine)
+	 */
 	char* cheminSource;
 	cheminSource=creerChemin(arg->source,suffixeCheminFichier);
 
+	/* Creation du chemin destination complet (chemin de la racine 
+	 * et du chemin relatif a la racine)
+	 */
 	char* cheminDestination;
 	cheminDestination=creerChemin(arg->destination,suffixeCheminFichier);
 
@@ -241,18 +301,23 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 	}
 
 
+	//Si le programme est en mode incremental
 	if(arg->incremental==1)
 	{
-
+		/* Creation du chemin contenant la precedente sauvegarde
+		 */
 		char* cheminSauvegarde;
 		cheminSauvegarde=creerChemin(arg->sauvegarde,suffixeCheminFichier);
 
 		struct stat statSauvegarde;
 	
+		// Si le fichier n'etait pas present dans la precedente sauvegarde
 		if(access(cheminSauvegarde,F_OK)!=0)
 		{
+			//On copie le fichier
 			copieComplete(cheminSource,cheminDestination,&statSource,arg);
 		}
+		// Si le fichier etait deja present dans la precedente sauvegarde
 		else
 		{
 
@@ -262,8 +327,13 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 				exit(EXIT_FAILURE);
 			}
 	
+			/* On compare la taille, la date de derniere modification et les permission
+			 * du fichier de la sauvegarde et du fichier source
+			 */
 			if(statSource.st_size == statSauvegarde.st_size && statSource.st_mtime == statSauvegarde.st_mtime && statSource.st_mode == statSauvegarde.st_mode)
-			{
+			{// Si ils sont identique
+				
+				//Si le programme n'est pas en mode verbeux
 				if(arg->verbeux==0)
 				{
 					if(link(cheminSauvegarde,cheminDestination)!=0)
@@ -274,17 +344,18 @@ void executionAnalyser(char* suffixeCheminFichier,struct argument* arg)
 				}
 				else
 				{
-					printf("Création lien %s vers %s\n",cheminDestination,cheminSauvegarde);
+					printf("Création du lien entre %s et %s\n",cheminDestination,cheminSauvegarde);
 				}
 			}
 			else
-			{
+			{// Si ils ne sont pas identique
 				copieComplete(cheminSource,cheminDestination,&statSource,arg);
 			}
 		}
 
 		free(cheminSauvegarde);
 	}
+	//Si le programme n'est pas en mode incrementale
 	else
 	{
 		copieComplete(cheminSource,cheminDestination,&statSource,arg);
@@ -304,6 +375,9 @@ void* analyser(void* arg)
 	pthread_mutex_lock(&argument->mut_compt);
 	while(1)
 	{
+		/* Si le buffer de fichier est vide mais qu'il y a
+		 * encore des scanner actif
+		 */
 		while(bufferFichier->interIdx==0 && scannerActif!=0)
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
@@ -311,6 +385,9 @@ void* analyser(void* arg)
 			pthread_mutex_lock(&argument->mut_compt);
 		}
 
+		/* Si le buffer de fichier est vide et qu'il n'y a
+		 * plus de scanner actif
+		 */
 		if(bufferFichier->interIdx==0 && scannerActif==0)
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
@@ -318,13 +395,18 @@ void* analyser(void* arg)
 			pthread_mutex_unlock(&argument->mut_analyser);
 			return (NULL);
 		}
+		//Si le buffer contient ou moins un fichier a traiter
 		else
 		{
 			pthread_mutex_unlock(&argument->mut_compt);
-			char* extrait=extractBuffFichier(bufferFichier,argument);
-		//	printf("extrait du buffer %s",extrait);
+
+			//Extraction du fichier a traiter
+			char* extrait=extractBuffFichier(bufferFichier/*,argument*/);
+			pthread_cond_broadcast(&argument->cond_analyser);
+
 			pthread_mutex_unlock(&argument->mut_analyser);
-	//		pthread_cond_broadcast(&argument->cond_analyser);
+
+			//Traitement du fichier
 			executionAnalyser(extrait,arg);
 
 			pthread_mutex_lock(&argument->mut_analyser);
@@ -348,6 +430,9 @@ int main(int argc,char* argv[])
 	struct argument arg;
 	arg.verbeux=0;
 
+	/*Valeur par defaut du nombre de scanner, d'annalyser
+	 * et de la taille du buffer de fichier
+	 */
 	int nbScanner=5;
 	int nbAnalyser=5;
 	int tailleBufferFichier=10;
@@ -360,19 +445,15 @@ int main(int argc,char* argv[])
 		{
 			case 'n':
 				arg.verbeux=1;
-			//	printf("verbeux\n");
 				break;
 			case 's':
 				nbScanner=atoi(optarg);
-			//	printf("nb scanner %d\n",atoi(optarg));
 				break;
 			case 'a':
 				nbAnalyser=atoi(optarg);
-			//	printf("nb analyser %d\n",atoi(optarg));
 				break;
 			case 'f':
 				tailleBufferFichier=atoi(optarg);
-			//	printf("taille buffer fichier %d\n",atoi(optarg));
 				break;
 		}
 	}
@@ -381,14 +462,12 @@ int main(int argc,char* argv[])
 		case 2:
 			arg.source=argv[optind++];
 			arg.destination=argv[optind];
-		//	printf("Source %s	destination %s\n",arg.source,arg.destination);
 			arg.incremental=0;
 			break;
 		case 3:
 			arg.source=argv[optind++];
 			arg.sauvegarde=argv[optind++];
 			arg.destination=argv[optind];
-		//	printf("Source %s	sauvegarde %s	destination %s\n",arg.source,arg.sauvegarde,arg.destination);
 			arg.incremental=1;
 			break;
 		default:
@@ -434,6 +513,7 @@ int main(int argc,char* argv[])
 	bufferFichier->idxEcrivain=0;
 	bufferFichier->interIdx=0;
 
+	//Initialisation des threads
 	pthread_t* tidScanner;
 	if((tidScanner=(pthread_t*)malloc(nbScanner*sizeof(pthread_t)))==NULL)
 	{
@@ -525,6 +605,7 @@ int main(int argc,char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	//Traitement du dossier racine
 	if(arg.verbeux==0)
 	{
 		struct stat statSource;
@@ -558,6 +639,7 @@ int main(int argc,char* argv[])
 	}
 
 
+	//Creation des threads
 	int i;
 	for(i=0;i<nbScanner;i++)
 	{
@@ -592,6 +674,7 @@ int main(int argc,char* argv[])
 	}
 
 
+	//Attente de la terminaison des threads
 	for(i=0;i<nbScanner;i++)
 	{
 		if(pthread_join(tidScanner[i],NULL)!=0)
