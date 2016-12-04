@@ -1,4 +1,4 @@
-sauve: sauve.c fctListe scanner.h analyser.h argument.h
+sauve: sauve.c fctListe argument.h
 	gcc -Wall -Wextra -g -pthread sauve.c fctListe.o -o sauve
 
 fctListe: buffer.h fctListe.h fctListe.c

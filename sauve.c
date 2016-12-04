@@ -10,8 +10,6 @@
 #include <utime.h>
 #include "buffer.h"
 #include "fctListe.h"
-#include "scanner.h"
-#include "analyser.h"
 #include "argument.h"
 
 
@@ -26,213 +24,7 @@ int scannerActif=0;
 
 
 
-int main(int argc,char* argv[])
-{
-	int argument;
 
-	struct argument arg;
-	arg.verbeux=0;
-
-	int nbScanner=5;
-	int nbAnalyser=5;
-	int tailleBufferFichier=10;
-
-	extern char* optarg;
-	extern int optind;
-	while((argument=getopt(argc,argv,"ns:a:f:"))!=-1)
-	{
-		switch(argument)
-		{
-			case 'n':
-				arg.verbeux=1;
-			//	printf("verbeux\n");
-				break;
-			case 's':
-				nbScanner=atoi(optarg);
-			//	printf("nb scanner %d\n",atoi(optarg));
-				break;
-			case 'a':
-				nbAnalyser=atoi(optarg);
-			//	printf("nb analyser %d\n",atoi(optarg));
-				break;
-			case 'f':
-				tailleBufferFichier=atoi(optarg);
-			//	printf("taille buffer fichier %d\n",atoi(optarg));
-				break;
-		}
-	}
-	switch(argc-optind)
-	{
-		case 2:
-			arg.source=argv[optind++];
-			arg.destination=argv[optind];
-		//	printf("Source %s	destination %s\n",arg.source,arg.destination);
-			arg.incremental=0;
-			break;
-		case 3:
-			arg.source=argv[optind++];
-			arg.sauvegarde=argv[optind++];
-			arg.destination=argv[optind];
-		//	printf("Source %s	sauvegarde %s	destination %s\n",arg.source,arg.sauvegarde,arg.destination);
-			arg.incremental=1;
-			break;
-		default:
-			fprintf(stderr,"Usage: %s [-n] [-s n] [-a n] [-f n] source [precedent] destination\n",argv[0]);
-			exit(EXIT_FAILURE);
-	}
-
-
-	//Initialisation du buffer de dossier
-
-	struct maillon* racine=creerMaillonDossier(".");
-	if((bufferDossier=(struct bufferDossier*)malloc(sizeof(struct bufferDossier)))==NULL)
-	{
-		perror("Erreur allocation bufferDossier");
-		exit(EXIT_FAILURE);
-	}
-	bufferDossier->dernier=NULL;
-	bufferDossier->liste=NULL;
-	addBuffDossier(racine,bufferDossier);
-
-
-	//Initialisation du buffer de fichier
-	if((bufferFichier=(struct bufferFichier*)malloc(sizeof(struct bufferFichier)))==NULL)
-	{
-		perror("Erreur allocation structure bufferFichier");
-		exit(EXIT_FAILURE);
-	}
-
-	if((bufferFichier->chemin=(char**)malloc(tailleBufferFichier*sizeof(char*)))==NULL)
-	{
-		perror("Erreur allocation buffer de fichier");
-		exit(EXIT_FAILURE);
-	}
-
-	bufferFichier->taille=tailleBufferFichier;
-	bufferFichier->idxLecteur=0;
-	bufferFichier->idxEcrivain=0;
-	bufferFichier->interIdx=0;
-
-	pthread_t* tidScanner;
-	if((tidScanner=(pthread_t*)malloc(nbScanner*sizeof(pthread_t)))==NULL)
-	{
-		perror("Erreur allocation du tableau de thread scanner");
-		exit(EXIT_FAILURE);
-	}
-
-	pthread_t* tidAnalyser;
-	if((tidAnalyser=(pthread_t*)malloc(nbAnalyser*sizeof(pthread_t)))==NULL)
-	{
-		perror("Erreur allocation du tableau de thread analyser");
-		exit(EXIT_FAILURE);
-	}
-
-
-	//Initialisation des arguments à passer aux threads
-
-	if(pthread_mutex_init(&arg.mut_scanner,NULL)!=0)
-	{
-		perror("Erreur creation mutex Scanner");
-		exit(EXIT_FAILURE);
-	}
-
-	if(pthread_mutex_init(&arg.mut_analyser,NULL)!=0)
-	{
-		perror("Erreur creation mutex analyser");
-		exit(EXIT_FAILURE);
-	}
-
-	if(pthread_mutex_init(&arg.mut_compt,NULL)!=0)
-	{
-		perror("Erreur creation mutex analyser");
-		exit(EXIT_FAILURE);
-	}
-
-	if(pthread_cond_init(&arg.cond_scanner,NULL)!=0)
-	{
-		perror("Erreur creation condition scanner");
-		exit(EXIT_FAILURE);
-	}
-
-	if(pthread_cond_init(&arg.cond_analyser,NULL)!=0)
-	{
-		perror("Erreur creation condition analyser");
-		exit(EXIT_FAILURE);
-	}
-
-	if(arg.verbeux==0)
-	{
-		struct stat statSource;
-		if(stat(arg.source,&statSource)!=0)
-		{
-			perror("Erreur stat racine");
-			exit(EXIT_FAILURE);
-		}
-
-		if(mkdir(arg.destination,statSource.st_mode)!=0)
-		{
-			perror("Erreur creation dossier racine");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else
-	{
-		printf("Copie dossier %s\n",arg.destination);
-	}
-
-
-	int i;
-	for(i=0;i<nbScanner;i++)
-	{
-		if(pthread_create(&tidScanner[i],NULL,scanner,&arg)!=0)
-		{
-			perror("Erreur création de thread scanneur");
-			exit(EXIT_FAILURE);
-		}
-	}
-
-	int j;
-
-	for(j=0;j<nbAnalyser;j++)
-	{
-		if(pthread_create(&tidAnalyser[j],NULL,analyser,&arg)!=0)
-		{
-			perror("Erreur creation de thread analyseur");
-			exit(EXIT_FAILURE);
-		}
-	}
-
-
-	for(i=0;i<nbScanner;i++)
-	{
-		if(pthread_join(tidScanner[i],NULL)!=0)
-		{
-			perror("Erreur terminaison de thread scanneur");
-			exit(EXIT_FAILURE);
-		}
-	}
-
-
-	for(j=0;j<nbAnalyser;j++)
-	{
-		if(pthread_join(tidAnalyser[j],NULL)!=0)
-		{
-			perror("Erreur terminaison de thread analyseur");
-			exit(EXIT_FAILURE);
-		}
-	}
-
-
-	free(tidScanner);
-	free(tidAnalyser);
-
-	free(bufferDossier);
-	free(bufferFichier->chemin);
-	free(bufferFichier);
-
-
-	return 0;
-}
 
 
 char* creerChemin(char* A, char* B)
@@ -367,13 +159,13 @@ void* scanner(void* arg)
 
 			executionScanner(extrait,argument);
 
+			pthread_cond_broadcast(&argument->cond_scanner);	//XXX utile?
+			pthread_cond_broadcast(&argument->cond_analyser);
 			pthread_mutex_lock(&argument->mut_scanner);
 
 			pthread_mutex_lock(&argument->mut_compt);
 			rmMaillonDossier(extrait);
 			scannerActif--;
-			pthread_cond_broadcast(&argument->cond_scanner);	//XXX utile?
-			pthread_cond_broadcast(&argument->cond_analyser);
 		}
 	}
 }
@@ -532,12 +324,313 @@ void* analyser(void* arg)
 			char* extrait=extractBuffFichier(bufferFichier,argument);
 		//	printf("extrait du buffer %s",extrait);
 			pthread_mutex_unlock(&argument->mut_analyser);
+	//		pthread_cond_broadcast(&argument->cond_analyser);
 			executionAnalyser(extrait,arg);
 
 			pthread_mutex_lock(&argument->mut_analyser);
 			pthread_mutex_lock(&argument->mut_compt);
 			free(extrait);
-			pthread_cond_broadcast(&argument->cond_analyser);
 		}
 	}
+}
+
+
+
+/*******************************************************************************************/
+
+
+
+
+int main(int argc,char* argv[])
+{
+	int argument;
+
+	struct argument arg;
+	arg.verbeux=0;
+
+	int nbScanner=5;
+	int nbAnalyser=5;
+	int tailleBufferFichier=10;
+
+	extern char* optarg;
+	extern int optind;
+	while((argument=getopt(argc,argv,"ns:a:f:"))!=-1)
+	{
+		switch(argument)
+		{
+			case 'n':
+				arg.verbeux=1;
+			//	printf("verbeux\n");
+				break;
+			case 's':
+				nbScanner=atoi(optarg);
+			//	printf("nb scanner %d\n",atoi(optarg));
+				break;
+			case 'a':
+				nbAnalyser=atoi(optarg);
+			//	printf("nb analyser %d\n",atoi(optarg));
+				break;
+			case 'f':
+				tailleBufferFichier=atoi(optarg);
+			//	printf("taille buffer fichier %d\n",atoi(optarg));
+				break;
+		}
+	}
+	switch(argc-optind)
+	{
+		case 2:
+			arg.source=argv[optind++];
+			arg.destination=argv[optind];
+		//	printf("Source %s	destination %s\n",arg.source,arg.destination);
+			arg.incremental=0;
+			break;
+		case 3:
+			arg.source=argv[optind++];
+			arg.sauvegarde=argv[optind++];
+			arg.destination=argv[optind];
+		//	printf("Source %s	sauvegarde %s	destination %s\n",arg.source,arg.sauvegarde,arg.destination);
+			arg.incremental=1;
+			break;
+		default:
+			fprintf(stderr,"Usage: %s [-n] [-s n] [-a n] [-f n] source [precedent] destination\n",argv[0]);
+			exit(EXIT_FAILURE);
+	}
+
+
+	//Initialisation du buffer de dossier
+
+	struct maillon* racine=creerMaillonDossier(".");
+	if((bufferDossier=(struct bufferDossier*)malloc(sizeof(struct bufferDossier)))==NULL)
+	{
+		perror("Erreur allocation bufferDossier");
+		rmMaillonDossier(racine);
+		exit(EXIT_FAILURE);
+	}
+	bufferDossier->dernier=NULL;
+	bufferDossier->liste=NULL;
+	addBuffDossier(racine,bufferDossier);
+
+
+	//Initialisation du buffer de fichier
+	if((bufferFichier=(struct bufferFichier*)malloc(sizeof(struct bufferFichier)))==NULL)
+	{
+		perror("Erreur allocation structure bufferFichier");
+		free(bufferDossier);
+		rmMaillonDossier(racine);
+		exit(EXIT_FAILURE);
+	}
+
+	if((bufferFichier->chemin=(char**)malloc(tailleBufferFichier*sizeof(char*)))==NULL)
+	{
+		perror("Erreur allocation buffer de fichier");
+		free(bufferDossier);
+		free(bufferFichier);
+		rmMaillonDossier(racine);
+		exit(EXIT_FAILURE);
+	}
+
+	bufferFichier->taille=tailleBufferFichier;
+	bufferFichier->idxLecteur=0;
+	bufferFichier->idxEcrivain=0;
+	bufferFichier->interIdx=0;
+
+	pthread_t* tidScanner;
+	if((tidScanner=(pthread_t*)malloc(nbScanner*sizeof(pthread_t)))==NULL)
+	{
+		perror("Erreur allocation du tableau de thread scanner");
+		free(bufferDossier);
+		free(bufferFichier->chemin);
+		free(bufferFichier);
+		rmMaillonDossier(racine);
+		exit(EXIT_FAILURE);
+	}
+
+	pthread_t* tidAnalyser;
+	if((tidAnalyser=(pthread_t*)malloc(nbAnalyser*sizeof(pthread_t)))==NULL)
+	{
+		perror("Erreur allocation du tableau de thread analyser");
+		free(bufferDossier);
+		free(bufferFichier->chemin);
+		free(bufferFichier);
+		free(tidScanner);
+		rmMaillonDossier(racine);
+		exit(EXIT_FAILURE);
+	}
+
+
+	//Initialisation des arguments à passer aux threads
+
+	if(pthread_mutex_init(&arg.mut_scanner,NULL)!=0)
+	{
+		perror("Erreur creation mutex Scanner");
+		free(bufferDossier);
+		free(bufferFichier->chemin);
+		free(bufferFichier);
+		free(tidScanner);
+		free(tidAnalyser);
+		rmMaillonDossier(racine);
+
+		exit(EXIT_FAILURE);
+	}
+
+	if(pthread_mutex_init(&arg.mut_analyser,NULL)!=0)
+	{
+		perror("Erreur creation mutex analyser");
+		free(bufferDossier);
+		free(bufferFichier->chemin);
+		free(bufferFichier);
+		free(tidScanner);
+		free(tidAnalyser);
+		rmMaillonDossier(racine);
+
+		exit(EXIT_FAILURE);
+	}
+
+	if(pthread_mutex_init(&arg.mut_compt,NULL)!=0)
+	{
+		perror("Erreur creation mutex analyser");
+		free(bufferDossier);
+		free(bufferFichier->chemin);
+		free(bufferFichier);
+		free(tidScanner);
+		free(tidAnalyser);
+		rmMaillonDossier(racine);
+
+		exit(EXIT_FAILURE);
+	}
+
+	if(pthread_cond_init(&arg.cond_scanner,NULL)!=0)
+	{
+		perror("Erreur creation condition scanner");
+		free(bufferDossier);
+		free(bufferFichier->chemin);
+		free(bufferFichier);
+		free(tidScanner);
+		free(tidAnalyser);
+		rmMaillonDossier(racine);
+
+		exit(EXIT_FAILURE);
+	}
+
+	if(pthread_cond_init(&arg.cond_analyser,NULL)!=0)
+	{
+		perror("Erreur creation condition analyser");
+		free(bufferDossier);
+		free(bufferFichier->chemin);
+		free(bufferFichier);
+		free(tidScanner);
+		free(tidAnalyser);
+		rmMaillonDossier(racine);
+
+		exit(EXIT_FAILURE);
+	}
+
+	if(arg.verbeux==0)
+	{
+		struct stat statSource;
+		if(stat(arg.source,&statSource)!=0)
+		{
+			perror("Erreur stat racine");
+			free(bufferDossier);
+			free(bufferFichier->chemin);
+			free(bufferFichier);
+			free(tidScanner);
+			free(tidAnalyser);
+			rmMaillonDossier(racine);
+			exit(EXIT_FAILURE);
+		}
+
+		if(mkdir(arg.destination,statSource.st_mode)!=0)
+		{
+			perror("Erreur creation dossier racine");
+			free(bufferDossier);
+			free(bufferFichier->chemin);
+			free(bufferFichier);
+			free(tidScanner);
+			free(tidAnalyser);
+			rmMaillonDossier(racine);
+			exit(EXIT_FAILURE);
+		}
+	}
+	else
+	{
+		printf("Copie dossier %s\n",arg.destination);
+	}
+
+
+	int i;
+	for(i=0;i<nbScanner;i++)
+	{
+		if(pthread_create(&tidScanner[i],NULL,scanner,&arg)!=0)
+		{
+			perror("Erreur création de thread scanneur");
+			free(bufferDossier);
+			free(bufferFichier->chemin);
+			free(bufferFichier);
+			free(tidScanner);
+			free(tidAnalyser);
+			rmMaillonDossier(racine);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	int j;
+
+	for(j=0;j<nbAnalyser;j++)
+	{
+		if(pthread_create(&tidAnalyser[j],NULL,analyser,&arg)!=0)
+		{
+			perror("Erreur creation de thread analyseur");
+			free(bufferDossier);
+			free(bufferFichier->chemin);
+			free(bufferFichier);
+			free(tidScanner);
+			free(tidAnalyser);
+			rmMaillonDossier(racine);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+
+	for(i=0;i<nbScanner;i++)
+	{
+		if(pthread_join(tidScanner[i],NULL)!=0)
+		{
+			perror("Erreur terminaison de thread scanneur");
+			free(bufferDossier);
+			free(bufferFichier->chemin);
+			free(bufferFichier);
+			free(tidScanner);
+			free(tidAnalyser);
+			rmMaillonDossier(racine);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+
+	for(j=0;j<nbAnalyser;j++)
+	{
+		if(pthread_join(tidAnalyser[j],NULL)!=0)
+		{
+			perror("Erreur terminaison de thread analyseur");
+			free(bufferDossier);
+			free(bufferFichier->chemin);
+			free(bufferFichier);
+			free(tidScanner);
+			free(tidAnalyser);
+			rmMaillonDossier(racine);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+
+	free(tidScanner);
+	free(tidAnalyser);
+
+	free(bufferDossier);
+	free(bufferFichier->chemin);
+	free(bufferFichier);
+
+
+	return 0;
 }
