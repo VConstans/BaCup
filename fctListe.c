@@ -85,7 +85,6 @@ void addBuffFichier(char* chemin,struct bufferFichier* buff,struct argument* arg
 	buff->idxEcrivain=(buff->idxEcrivain+1)%buff->taille;
 	buff->interIdx++;
 
-	pthread_cond_signal(&arg->cond_analyser);
 	pthread_mutex_unlock(&arg->mut_analyser);
 }
 

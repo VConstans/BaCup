@@ -13,8 +13,7 @@ attente que le dernier scanneur finisse son travail.
 Dans le cas où le buffer dossier est vide mais qu'il y a encore des scanneurs
 qui peuvent remplir ce buffer, alors le thread va se mettre en attente
 conditionnelle.  L'attente prendra fin lorsqu'un autre thread scanneur aura
-fini de scanner et de traiter un répertoire et aura potentiellement ajouté
-des dossiers à scanner dans le buffer de dossier.
+ajouter un répertoire au buffer de dossier.
 Pour synchroniser les différents threads scanneurs entre eux, le programme
 utilise deux mutex et une variable condition (dont nous venons de voir l'utilité
 et qui permet d'avoir une attente passive lorsqu'il n'y a pas de travail
@@ -53,8 +52,7 @@ des scanneurs. Ils vont eux aussi s'arrêter lorsque que le buffer de fichier
 est vide et qu'il n'y a plus de scanneurs actifs susceptible de le remplir.
 Tout comme les scanneurs ils vont entrer en attente conditionnelle si le buffer
 est vide mais qu'il reste des scanneurs actifs. Cette attente prendra fin lorsqu'un
-scanneur aura fini son traitement d'un répertoire et qu'il a pu possiblement
-ajouter des fichiers à traiter dans le buffer de fichier. 
+scanneur aura ajouté un fichier dans le buffer de fichier.
 Pour se synchroniser entre eux, les analyseurs utilisent un mutex d'accès au buffer
 de fichier, et la variable condition permettant l'attente passive de
 remplissage du buffer de fichier. Ils utilisent donc aussi le mutex permettant
